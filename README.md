@@ -12,7 +12,7 @@ learning guide of the Quantitative Finance course, and is oriented toward
 solving real-world corporate financial problems.
 
 
-GENERAL OBJECTIVE
+## GENERAL OBJECTIVE
 
 To correctly apply project valuation models with stochastic variables,
 decision trees, simulation, and risk-neutral valuation in order to solve
@@ -20,7 +20,7 @@ common corporate problems, including the valuation of financial options and
 investment decision-making through the use of real options.
 
 
-PROJECT APPROACH
+## PROJECT APPROACH
 
 The repository follows a structured approach based on three core layers:
 
@@ -39,7 +39,7 @@ The repository follows a structured approach based on three core layers:
      corporate decisions.
 
 
-MAIN CONTENT
+## MAIN CONTENT
 
 1. Modeling for decision making under uncertainty
    - Stochastic variables and probability distributions.
@@ -71,7 +71,7 @@ MAIN CONTENT
    - Practical applications of customized real options.
 
 
-REPOSITORY STRUCTURE
+## REPOSITORY STRUCTURE
 
 The repository is organized in a modular way to reflect the natural flow of
 quantitative analysis:
@@ -82,14 +82,14 @@ quantitative analysis:
 - Documentation containing theoretical notes and mathematical explanations.
 
 
-TOOLS AND TECHNOLOGIES
+## TOOLS AND TECHNOLOGIES
 
 - Python as the main language for quantitative development.
 - Jupyter Notebook for analysis, simulation, and visualization.
 - Scientific libraries for numerical computation and financial modeling.
 
 
-EXPECTED OUTCOMES
+## EXPECTED OUTCOMES
 
 By the end of this project, the repository aims to:
 
@@ -101,7 +101,7 @@ By the end of this project, the repository aims to:
 - Use real options as an advanced decision-making tool.
 
 
-FINAL NOTE
+## FINAL NOTE
 
 This repository is not intended to present closed-form recipes, but to
 document the complete quantitative process: problem formulation, model
