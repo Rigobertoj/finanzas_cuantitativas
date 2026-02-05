@@ -1,0 +1,327 @@
+---
+title: "HW 2.1"
+format:
+  pdf:
+    documentclass: scrartcl
+    pdf-engine: xelatex
+---
+
+# Tarea 2.1
+
+Encuentra los mejores parámetros de ML para PDF de Bernoulli o Poisson.
+
+## ML para Bernoulli
+
+### 1. Seleccionar PDF
+
+Sea $(\Omega,\mathcal{F},\mathbb{P})$ un espacio de probabilidad y $X(\omega)$ una variable aleatoria, con distribución de Bernoulli, es decir
+
+$X$ una función $\mathcal{F}$-medible de Bernoulli con
+
+$$
+X:\Omega \to \{0,1\}
+$$
+
+tal que existe un $p\in[0,1]$, donde
+
+$$
+\mathbb{P}(X=1)=p
+\qquad \text{y} \qquad
+\mathbb{P}(X=0)=1-p.
+$$
+
+Es decir
+
+$$
+X \sim \mathrm{Bern}(p).
+$$
+
+Equivalente a
+
+$$
+\mathbb{P}(X=x)=p^{x}(1-p)^{1-x}
+\qquad \text{con} \qquad x\in\{0,1\}.
+$$
+
+Por tanto, se busca maximizar $p$.
+
+### 2. Aplicar ML a la PDF
+
+$$
+L(X_i,\mu,\sigma^2)=\prod_{i=1}^{n} f(x_i)=\prod_{i=1}^{n} p^{x_i}(1-p)^{1-x_i}.
+$$
+
+### 3. Reescribir $L$
+
+$$
+G=\ln\!\big[L(X_i,\mu,\sigma^2)\big]
+=\ln\!\left(\prod_{i=1}^{n} p^{x_i}(1-p)^{1-x_i}\right).
+$$
+
+(1)
+
+$$
+=\sum_{i=1}^{n}\ln\!\left[p^{x_i}(1-p)^{1-x_i}\right].
+$$
+
+$$
+=\sum_{i=1}^{n}\left[\ln\!\left(p^{x_i}\right)+\ln\!\left((1-p)^{1-x_i}\right)\right].
+$$
+
+(2)
+
+$$
+=\sum_{i=1}^{n} x_i\ln(p)\;+\;\sum_{i=1}^{n} (1-x_i)\ln(1-p).
+$$
+
+### 4. Derivamos con respecto al parámetro
+
+$$
+\frac{dG}{dp}
+=\frac{d}{dp}\left[\sum_{i=1}^{n} x_i\ln(p)+\sum_{i=1}^{n}(1-x_i)\ln(1-p)\right].
+$$
+
+$$
+=\frac{d}{dp}\left[\sum_{i=1}^{n} x_i\ln(p)\right]
++\frac{d}{dp}\left[\sum_{i=1}^{n}(1-x_i)\ln(1-p)\right].
+$$
+
+$$
+=\sum_{i=1}^{n} x_i\,\frac{d}{dp}\ln(p)
++\sum_{i=1}^{n}(1-x_i)\,\frac{d}{dp}\ln(1-p).
+$$
+
+$$
+=\sum_{i=1}^{n}\frac{x_i}{p}
++\sum_{i=1}^{n}(1-x_i)\left(\frac{-1}{1-p}\right).
+$$
+
+### 5. Igualamos a cero
+
+$$
+\frac{dG}{dp}=0
+\;\Rightarrow\;
+\sum_{i=1}^{n}\frac{x_i}{p}
++\sum_{i=1}^{n}(1-x_i)\left(\frac{-1}{1-p}\right)=0.
+$$
+
+$$
+\Rightarrow\;
+\sum_{i=1}^{n}\frac{x_i}{p}
++\sum_{i=1}^{n}\left[\frac{x_i}{1-p}-\frac{1}{1-p}\right]=0.
+$$
+
+$$
+\Rightarrow\;
+\sum_{i=1}^{n}\frac{x_i}{p}
+=\sum_{i=1}^{n}\left[\frac{1}{1-p}-\frac{x_i}{1-p}\right].
+$$
+
+$$
+\Rightarrow\;
+\sum_{i=1}^{n}\frac{x_i}{p}
+=\sum_{i=1}^{n}\frac{1}{1-p}-\sum_{i=1}^{n}\frac{x_i}{1-p}.
+$$
+
+$$
+\Rightarrow\;
+\sum_{i=1}^{n}\frac{x_i}{p}
++\sum_{i=1}^{n}\frac{x_i}{1-p}
+=\sum_{i=1}^{n}\frac{1}{1-p}.
+$$
+
+$$
+\Rightarrow\;
+\frac{1}{p}\sum_{i=1}^{n}x_i
++\frac{1}{1-p}\sum_{i=1}^{n}x_i
+=\frac{n}{1-p}.
+$$
+
+$$
+\Rightarrow\;
+\frac{1-p}{p}\sum_{i=1}^{n}x_i+\sum_{i=1}^{n}x_i=n.
+$$
+
+$$
+\Rightarrow\;
+\sum_{i=1}^{n}x_i\left(\frac{1-p}{p}+1\right)=n.
+$$
+
+$$
+\Rightarrow\;
+\sum_{i=1}^{n}x_i\left(\frac{1-p+p}{p}\right)=n.
+$$
+
+$$
+\Rightarrow\;
+\sum_{i=1}^{n}x_i\left(\frac{1}{p}\right)=n.
+$$
+
+$$
+\Rightarrow\;
+\sum_{i=1}^{n}x_i=pn.
+$$
+
+$$
+\Rightarrow\;
+p=\frac{1}{n}\sum_{i=1}^{n}x_i.
+$$
+
+Este punto es importante porque $x\in\{0,1\}$ y por tanto, solo tiene 2 estados para $p$.
+
+$$
+\text{Si } x=0 \Rightarrow \hat{p}=\frac{1}{1}(0)=0
+\qquad\Rightarrow\qquad
+\hat{p}=0.
+$$
+
+$$
+\text{Si } x=1 \Rightarrow \hat{p}=\frac{1}{1}(1)=1
+\qquad\Rightarrow\qquad
+\hat{p}=1.
+$$
+
+### 6. Derivamos una segunda vez para evaluar concavidad o convexidad
+
+$$
+\frac{d^{2}G}{dp^{2}}
+=\frac{d}{dp}\left[\sum_{i=1}^{n}\frac{x_i}{p}
++\sum_{i=1}^{n}(1-x_i)\left(\frac{-1}{1-p}\right)\right].
+$$
+
+$$
+= -\frac{d}{dp}\left[\sum_{i=1}^{n}\frac{x_i}{p}\right]
++\frac{d}{dp}\left[\sum_{i=1}^{n}(1-x_i)\left(\frac{-1}{1-p}\right)\right].
+$$
+
+$$
+=\sum_{i=1}^{n}x_i\,\frac{d}{dp}\left[\frac{1}{p}\right]
++\sum_{i=1}^{n}(1-x_i)(-1)\,\frac{d}{dp}\left[\frac{1}{1-p}\right].
+$$
+
+$$
+=\sum_{i=1}^{n}x_i(-1)\frac{1}{p^{2}}
++\sum_{i=1}^{n}(1-x_i)(-1)\left(\frac{-1}{(1-p)^{2}}\right).
+$$
+
+$$
+=\sum_{i=1}^{n}x_i\left(\frac{-1}{p^{2}}\right)
++\sum_{i=1}^{n}(1-x_i)\left(\frac{1}{(1-p)^{2}}\right).
+$$
+
+\vspace{1em}
+
+\noindent\textbf{Derivadas auxiliares (tal cual):}
+
+$$
+\frac{d}{dp}\left(\frac{1}{p}\right)
+=\frac{d}{dp}\left(p^{-1}\right)
+=(-1)p^{-2}.
+$$
+
+$$
+\frac{d}{dp}\left(\frac{1}{1-p}\right)
+=\frac{d}{dp}\left((1-p)^{-1}\right)
+=-1(1-p)^{-2}(-1)
+=(1-p)^{-2}(-1).
+$$
+
+\vspace{1em}
+
+Ahora con la expresión actual no podemos determinar si es max o min, por lo que haremos un cambio de variable.
+
+Decimos que
+
+$$
+S=\sum_{i=1}^{n}x_i.
+$$
+
+Tomamos la expresión de la primera derivada. Sustituimos
+
+$$
+\frac{dG}{dp}
+=\sum_{i=1}^{n}\frac{x_i}{p}
++\sum_{i=1}^{n}(1-x_i)\left(\frac{-1}{1-p}\right).
+$$
+
+Realizamos el cambio de variable
+
+$$
+\frac{dG}{dp}
+=\frac{S}{p}+(n-S)\left(\frac{-1}{1-p}\right).
+$$
+
+$$
+=\frac{S}{p}+\frac{S}{1-p}-\frac{n}{1-p}.
+$$
+
+$$
+=S\left(\frac{1}{p}+\frac{1}{1-p}\right)-\frac{n}{1-p}.
+$$
+
+$$
+\Rightarrow\;
+S\left(\frac{1}{p}+\frac{1}{1-p}\right)=\frac{n}{1-p}.
+$$
+
+$$
+\Rightarrow\;
+S=\frac{n}{1-p}\left[\frac{1}{\left(\frac{1}{p}+\frac{1}{1-p}\right)}\right].
+$$
+
+$$
+\Rightarrow\;
+S=\frac{n}{1-p}\left[\frac{1}{\frac{(1-p)+p}{p(1-p)}}\right].
+$$
+
+$$
+S=\frac{n}{1-p}\big[p(1-p)\big].
+$$
+
+$$
+S=np.
+$$
+
+Sustituimos el valor de $S$ en la segunda derivada
+
+$$
+\frac{d^{2}G}{dp^{2}}
+=-\sum_{i=1}^{n}x_i\frac{1}{p^{2}}
+-\sum_{i=1}^{n}\frac{(1-x_i)}{(1-p)^{2}}.
+$$
+
+$$
+=-\frac{S}{p^{2}}-\frac{(n-S)}{(1-p)^{2}}.
+$$
+
+$$
+=-\frac{np}{p^{2}}-\frac{n-np}{(1-p)^{2}}.
+$$
+
+$$
+=-\frac{n}{p}-\frac{n(1-p)}{(1-p)^{2}}.
+$$
+
+$$
+=-\frac{n}{p}-\frac{n}{1-p}.
+$$
+
+$$
+=-n\left(\frac{1}{p}+\frac{1}{1-p}\right).
+$$
+
+$$
+=-n\left(\frac{(1-p)+p}{p(1-p)}\right).
+$$
+
+$$
+=-n\left[\frac{1}{p(1-p)}\right].
+$$
+
+Ahora, al ser $n>0$ y $p\in(0,1)$, tenemos que por el signo $-n$
+
+$$
+\frac{d^{2}G}{dp^{2}}<0.
+$$
+
+Por tanto, $\frac{dG}{dp}=0$, es un máximo.
