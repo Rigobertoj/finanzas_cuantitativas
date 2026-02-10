@@ -48,13 +48,13 @@ Por tanto, se busca maximizar $p$.
 ### 2. Aplicar ML a la PDF
 
 $$
-L(X_i,\mu,\sigma^2)=\prod_{i=1}^{n} f(x_i)=\prod_{i=1}^{n} p^{x_i}(1-p)^{1-x_i}.
+L(p; x_1,\ldots,x_n)=\prod_{i=1}^{n} f(x_i\mid p)=\prod_{i=1}^{n} p^{x_i}(1-p)^{1-x_i}, \quad x_i\in\{0,1\}.
 $$
 
 ### 3. Reescribir $L$
 
 $$
-G=\ln\!\big[L(X_i,\mu,\sigma^2)\big]
+\ell(p)=\ln\!\big[L(p; x_1,\ldots,x_n)\big]
 =\ln\!\left(\prod_{i=1}^{n} p^{x_i}(1-p)^{1-x_i}\right).
 $$
 
