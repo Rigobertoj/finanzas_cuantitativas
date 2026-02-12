@@ -8,115 +8,326 @@ fuente : https://stackoverflow.com/questions/6620471/fitting-empirical-distribut
 
 #https://pypi.org/project/fitter/
 
-import scipy.stats as st
-import matplotlib.pyplot as plt
-import pandas as pd
-
 import warnings
+from typing import Any, Optional, Sequence, Tuple, Union
+
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import scipy.stats as st
+from matplotlib.axes import Axes
 
 
-# Create models from data
-def best_fit_distribution(data, bins=200, ax=None):
-    """Model data by finding best fit distribution to data"""
-    # Get histogram of original data
-    y, x = np.histogram(data, bins=bins, density=True)
-    x = (x + np.roll(x, -1))[:-1] / 2.0
+DEFAULT_DISTRIBUTION_NAMES: Tuple[str, ...] = (
+    "alpha",
+    "anglit",
+    "arcsine",
+    "beta",
+    "betaprime",
+    "bradford",
+    "burr",
+    "cauchy",
+    "chi",
+    "chi2",
+    "cosine",
+    "dgamma",
+    "dweibull",
+    "erlang",
+    "expon",
+    "exponnorm",
+    "exponweib",
+    "exponpow",
+    "f",
+    "fatiguelife",
+    "fisk",
+    "foldcauchy",
+    "foldnorm",
+    "frechet_r",
+    "frechet_l",
+    "genlogistic",
+    "genpareto",
+    "gennorm",
+    "genexpon",
+    "genextreme",
+    "gausshyper",
+    "gamma",
+    "gengamma",
+    "genhalflogistic",
+    "gilbrat",
+    "gompertz",
+    "gumbel_r",
+    "gumbel_l",
+    "halfcauchy",
+    "halflogistic",
+    "halfnorm",
+    "halfgennorm",
+    "hypsecant",
+    "invgamma",
+    "invgauss",
+    "invweibull",
+    "johnsonsb",
+    "johnsonsu",
+    "ksone",
+    "kstwobign",
+    "laplace",
+    "levy",
+    "levy_l",
+    "levy_stable",
+    "logistic",
+    "loggamma",
+    "loglaplace",
+    "lognorm",
+    "lomax",
+    "maxwell",
+    "mielke",
+    "nakagami",
+    "ncx2",
+    "ncf",
+    "nct",
+    "norm",
+    "pareto",
+    "pearson3",
+    "powerlaw",
+    "powerlognorm",
+    "powernorm",
+    "rdist",
+    "reciprocal",
+    "rayleigh",
+    "rice",
+    "recipinvgauss",
+    "semicircular",
+    "t",
+    "triang",
+    "truncexpon",
+    "truncnorm",
+    "tukeylambda",
+    "uniform",
+    "vonmises",
+    "vonmises_line",
+    "wald",
+    "weibull_min",
+    "weibull_max",
+    "wrapcauchy",
+)
 
-    # Distributions to check
-    # DISTRIBUTIONS = [        
-    #     st.alpha,st.anglit,st.arcsine,st.beta,st.betaprime,st.bradford,st.burr,st.cauchy,st.chi,st.chi2,st.cosine,
-    #     st.dgamma,st.dweibull,st.erlang,st.expon,st.exponnorm,st.exponweib,st.exponpow,st.f,st.fatiguelife,st.fisk,
-    #     st.foldcauchy,st.foldnorm,st.frechet_r,st.frechet_l,st.genlogistic,st.genpareto,st.gennorm,st.genexpon,
-    #     st.genextreme,st.gausshyper,st.gamma,st.gengamma,st.genhalflogistic,st.gilbrat,st.gompertz,st.gumbel_r,
-    #     st.gumbel_l,st.halfcauchy,st.halflogistic,st.halfnorm,st.halfgennorm,st.hypsecant,st.invgamma,st.invgauss,
-    #     st.invweibull,st.johnsonsb,st.johnsonsu,st.ksone,st.kstwobign,st.laplace,st.levy,st.levy_l,st.levy_stable,
-    #     st.logistic,st.loggamma,st.loglaplace,st.lognorm,st.lomax,st.maxwell,st.mielke,st.nakagami,st.ncx2,st.ncf,
-    #     st.nct,st.norm,st.pareto,st.pearson3,st.powerlaw,st.powerlognorm,st.powernorm,st.rdist,st.reciprocal,
-    #     st.rayleigh,st.rice,st.recipinvgauss,st.semicircular,st.t,st.triang,st.truncexpon,st.truncnorm,st.tukeylambda,
-    #     st.uniform,st.vonmises,st.vonmises_line,st.wald,st.weibull_min,st.weibull_max,st.wrapcauchy
-    # ]
+_DISTRIBUTION_ALIASES = {
+    # Legacy names from old scipy versions.
+    "gilbrat": "gibrat",
+    "frechet_r": "invweibull",
+    "frechet_l": "weibull_max",
+}
 
-    # Distributions to check
-    # DISTRIBUTIONS = [  st.alpha,st.anglit,st.arcsine,st.beta,st.betaprime,st.bradford,st.burr,st.cauchy,st.chi,st.chi2,st.cosine,
-    #      st.dgamma,st.dweibull,st.erlang,st.expon,st.exponnorm,st.exponweib,st.exponpow,st.f,st.fatiguelife,st.fisk,
-    #     st.foldcauchy,st.foldnorm,st.frechet_r,st.frechet_l,st.genlogistic,st.genpareto,st.gennorm,st.genexpon,
-    #      st.genextreme,st.gausshyper,st.gamma,st.gengamma,st.genhalflogistic,st.gilbrat,st.gompertz,st.gumbel_r,
-    #      st.gumbel_l,st.halfcauchy,st.halflogistic,st.halfnorm,st.halfgennorm,st.hypsecant,st.invgamma,st.invgauss,
-    #      st.invweibull,st.johnsonsb,st.johnsonsu,st.ksone,st.kstwobign,st.laplace,st.levy,st.levy_l,st.levy_stable,
-    #      st.logistic,st.loggamma,st.loglaplace,st.lognorm,st.lomax,st.maxwell,st.mielke,st.nakagami,st.ncx2,st.ncf,
-    #      st.nct,st.norm,st.pareto,st.pearson3,st.powerlaw,st.powerlognorm,st.powernorm,st.rdist,st.reciprocal,
-    #      st.rayleigh,st.rice,st.recipinvgauss,st.semicircular,st.t,st.triang,st.truncexpon,st.truncnorm,st.tukeylambda,
-    #      st.uniform,st.vonmises,st.vonmises_line,st.wald,st.weibull_min,st.weibull_max,st.wrapcauchy]
-    
-    DISTRIBUTIONS = [st.gennorm,st.genexpon,st.lognorm,st.lomax,st.maxwell,st.mielke,st.nakagami,st.ncx2,st.ncf,
-    st.nct,st.norm,st.powerlognorm, st.uniform, st.poisson]
-    
-    #DISTRIBUTIONS = [st.norm, st.uniform, st.poisson,st.expon]
 
-    # Best holders
-    best_distribution : st.stats
-    best_params : tuple
-    best_sse = np.inf
+def _resolve_distribution(name: str) -> Optional[Any]:
+    """Resolve a scipy distribution name, including legacy aliases."""
+    dist = getattr(st, name, None)
+    if dist is None:
+        alias = _DISTRIBUTION_ALIASES.get(name)
+        dist = getattr(st, alias, None) if alias else None
 
-    # Estimate distribution parameters from data
-    for distribution in DISTRIBUTIONS:
+    if dist is None:
+        return None
+    if not hasattr(dist, "fit") or not hasattr(dist, "pdf"):
+        return None
 
-        # Try to fit the distribution
-        try:
-            # Ignore warnings from data that can't be fit
-            with warnings.catch_warnings():
-                warnings.filterwarnings('ignore')
+    return dist
 
-                # fit dist to data
-                params = distribution.fit(data)
 
-                # Separate parts of parameters
-                arg = params[:-2]
-                loc = params[-2]
-                scale = params[-1]
+def _build_default_distributions(names: Sequence[str]) -> Tuple[Any, ...]:
+    """Build a tuple of unique scipy distributions available in this environment."""
+    resolved = []
+    seen = set()
+    for name in names:
+        dist = _resolve_distribution(name)
+        if dist is None:
+            continue
 
-                # Calculate fitted PDF and error with fit in distribution
-                pdf = distribution.pdf(x, loc=loc, scale=scale, *arg)
-                sse = np.sum(np.power(y - pdf, 2.0))
+        dist_name = getattr(dist, "name", name)
+        if dist_name in seen:
+            continue
 
-                # if axis pass in add to plot
-                try:
-                    if ax:
-                        pd.Series(pdf, x).plot(ax=ax)
-                
-                except Exception:
-                    pass
+        seen.add(dist_name)
+        resolved.append(dist)
 
-                # identify if this distribution is better
-                if best_sse > sse > 0:
-                    best_distribution = distribution
-                    best_params = params
-                    best_sse = sse
+    if not resolved:
+        raise RuntimeError("No valid default distributions were resolved from scipy.stats.")
 
-        except Exception:
-            pass
+    return tuple(resolved)
 
-    return (best_distribution.name, best_params)
 
-def make_pdf(dist, params, size=10000):
-    """Generate distributions's Probability Distribution Function """
+DEFAULT_DISTRIBUTIONS: Tuple[Any, ...] = _build_default_distributions(DEFAULT_DISTRIBUTION_NAMES)
 
-    # Separate parts of parameters
+
+def _prepare_numeric_data(data: Union[pd.Series, np.ndarray, Sequence[float]]) -> np.ndarray:
+    """Convert input data to a clean 1D numeric array."""
+    raw_values = np.asarray(data).ravel()
+    values = pd.to_numeric(pd.Series(raw_values), errors="coerce").to_numpy(dtype=float)
+    values = values[np.isfinite(values)]
+    if values.size < 2:
+        raise ValueError("`data` must contain at least two finite numeric values.")
+    return values
+
+
+def _distribution_pdf(distribution: Any, x: np.ndarray, params: Tuple[float, ...]) -> Optional[np.ndarray]:
+    """Evaluate PDF values for a scipy continuous distribution."""
+    if len(params) < 2 or not hasattr(distribution, "pdf"):
+        return None
+
     arg = params[:-2]
     loc = params[-2]
     scale = params[-1]
+    pdf = distribution.pdf(x, *arg, loc=loc, scale=scale)
+    return np.asarray(pdf, dtype=float)
 
-    # Get sane start and end points of distribution
-    start = dist.ppf(0.01, *arg, loc=loc, scale=scale) if arg else dist.ppf(0.01, loc=loc, scale=scale)
-    end = dist.ppf(0.99, *arg, loc=loc, scale=scale) if arg else dist.ppf(0.99, loc=loc, scale=scale)
 
-    # Build PDF and turn into pandas Series
-    x = np.linspace(start, end, size)
-    y = dist.pdf(x, loc=loc, scale=scale, *arg)
-    pdf = pd.Series(y, x)
+def _split_distribution_params(params: Sequence[float]) -> Tuple[Tuple[float, ...], float, float]:
+    """Split scipy distribution parameters into shape args, loc and scale."""
+    if len(params) < 2:
+        raise ValueError("`params` must include at least loc and scale.")
 
-    return pdf
+    values = tuple(float(value) for value in params)
+    arg = values[:-2]
+    loc = values[-2]
+    scale = values[-1]
+    if not np.isfinite(scale) or scale <= 0:
+        raise ValueError("`scale` parameter must be a positive finite number.")
+
+    return arg, loc, scale
+
+
+def _resolve_pdf_interval(
+    dist: Any,
+    arg: Tuple[float, ...],
+    loc: float,
+    scale: float,
+    lower_quantile: float,
+    upper_quantile: float,
+) -> Tuple[float, float]:
+    """Return a finite interval where the PDF can be evaluated safely."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            start = float(dist.ppf(lower_quantile, *arg, loc=loc, scale=scale))
+            end = float(dist.ppf(upper_quantile, *arg, loc=loc, scale=scale))
+            if np.isfinite(start) and np.isfinite(end) and start < end:
+                return start, end
+        except Exception:
+            pass
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            support_start, support_end = dist.support(*arg, loc=loc, scale=scale)
+            support_start = float(support_start)
+            support_end = float(support_end)
+            if np.isfinite(support_start) and np.isfinite(support_end) and support_start < support_end:
+                return support_start, support_end
+        except Exception:
+            pass
+
+    spread = max(4.0 * scale, 1.0)
+    return loc - spread, loc + spread
+
+
+# Create models from data
+def best_fit_distribution(
+    data: Union[pd.Series, np.ndarray, Sequence[float]],
+    bins: int = 200,
+    ax: Optional[Axes] = None,
+    distributions: Optional[Sequence[Any]] = None,
+) -> Tuple[str, Tuple[float, ...]]:
+    """Return the best fitted distribution name and parameters based on SSE.
+
+    The function fits each candidate distribution to `data` and compares the
+    fitted PDF against the empirical histogram density.
+    """
+    if bins < 2:
+        raise ValueError("`bins` must be >= 2.")
+
+    clean_data = _prepare_numeric_data(data)
+    y_hist, bin_edges = np.histogram(clean_data, bins=bins, density=True)
+    x_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+
+    candidates = tuple(distributions) if distributions is not None else DEFAULT_DISTRIBUTIONS
+    if not candidates:
+        raise ValueError("`distributions` cannot be empty.")
+
+    best_distribution_name: Optional[str] = None
+    best_params: Tuple[float, ...] = ()
+    best_sse = np.inf
+
+    for distribution in candidates:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            try:
+                params = tuple(distribution.fit(clean_data))
+                pdf = _distribution_pdf(distribution, x_centers, params)
+            except Exception:
+                continue
+
+        if pdf is None or not np.all(np.isfinite(pdf)):
+            continue
+
+        sse = float(np.sum((y_hist - pdf) ** 2.0))
+        if not np.isfinite(sse):
+            continue
+
+        if ax is not None:
+            pd.Series(pdf, index=x_centers).plot(ax=ax)
+
+        if sse < best_sse:
+            best_sse = sse
+            best_distribution_name = distribution.name
+            best_params = params
+
+    if best_distribution_name is None:
+        raise ValueError("No candidate distribution could be fitted to the provided data.")
+
+    return best_distribution_name, best_params
+
+def make_pdf(
+    dist: Any,
+    params: Sequence[float],
+    size: int = 10000,
+    lower_quantile: float = 0.01,
+    upper_quantile: float = 0.99,
+) -> pd.Series:
+    """Generate a PDF series for a fitted scipy distribution.
+
+    Args:
+        dist: Scipy distribution object (e.g. ``scipy.stats.norm``).
+        params: Fitted parameters ordered as ``(*shape_args, loc, scale)``.
+        size: Number of points in the generated grid.
+        lower_quantile: Lower percentile used to define the plotting interval.
+        upper_quantile: Upper percentile used to define the plotting interval.
+
+    Returns:
+        A pandas ``Series`` where index is the x-grid and values are PDF values.
+    """
+    if size < 2:
+        raise ValueError("`size` must be >= 2.")
+    if not (0.0 < lower_quantile < upper_quantile < 1.0):
+        raise ValueError("Quantiles must satisfy 0 < lower_quantile < upper_quantile < 1.")
+    if not hasattr(dist, "pdf"):
+        raise TypeError("`dist` must provide a `pdf` method.")
+
+    arg, loc, scale = _split_distribution_params(params)
+    start, end = _resolve_pdf_interval(dist, arg, loc, scale, lower_quantile, upper_quantile)
+    x = np.linspace(start, end, size, dtype=float)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        y = np.asarray(dist.pdf(x, *arg, loc=loc, scale=scale), dtype=float)
+
+    if y.shape != x.shape:
+        raise ValueError("Generated PDF has an unexpected shape.")
+
+    y[~np.isfinite(y)] = 0.0
+    y = np.clip(y, a_min=0.0, a_max=None)
+    if not np.any(y > 0):
+        raise ValueError("Unable to generate a valid PDF with the provided distribution and parameters.")
+
+    return pd.Series(y, index=x, name=f"{getattr(dist, 'name', 'distribution')}_pdf")
 
 def main():
     # Load data from statsmodels datasets
