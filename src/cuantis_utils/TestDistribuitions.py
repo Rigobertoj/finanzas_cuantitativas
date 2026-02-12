@@ -9,13 +9,9 @@ fuente : https://stackoverflow.com/questions/6620471/fitting-empirical-distribut
 #https://pypi.org/project/fitter/
 
 import scipy.stats as st
-import statsmodels as sm
 import matplotlib.pyplot as plt
 import pandas as pd
 
-pd.core.common.is_list_like = pd.api.types.is_list_like
-
-import pandas_datareader.data as web 
 import warnings
 import numpy as np
 
@@ -41,7 +37,7 @@ def best_fit_distribution(data, bins=200, ax=None):
     #     st.uniform,st.vonmises,st.vonmises_line,st.wald,st.weibull_min,st.weibull_max,st.wrapcauchy
     # ]
 
-   # Distributions to check
+    # Distributions to check
     # DISTRIBUTIONS = [  st.alpha,st.anglit,st.arcsine,st.beta,st.betaprime,st.bradford,st.burr,st.cauchy,st.chi,st.chi2,st.cosine,
     #      st.dgamma,st.dweibull,st.erlang,st.expon,st.exponnorm,st.exponweib,st.exponpow,st.f,st.fatiguelife,st.fisk,
     #     st.foldcauchy,st.foldnorm,st.frechet_r,st.frechet_l,st.genlogistic,st.genpareto,st.gennorm,st.genexpon,
@@ -53,13 +49,14 @@ def best_fit_distribution(data, bins=200, ax=None):
     #      st.rayleigh,st.rice,st.recipinvgauss,st.semicircular,st.t,st.triang,st.truncexpon,st.truncnorm,st.tukeylambda,
     #      st.uniform,st.vonmises,st.vonmises_line,st.wald,st.weibull_min,st.weibull_max,st.wrapcauchy]
     
-    #DISTRIBUTIONS = [st.gennorm,st.genexpon,st.lognorm,st.lomax,st.maxwell,st.mielke,st.nakagami,st.ncx2,st.ncf,
-     #   st.nct,st.norm,st.powerlognorm, st.uniform, st.poisson     ]
-    DISTRIBUTIONS = [st.norm, st.uniform, st.poisson,st.expon  ]
+    DISTRIBUTIONS = [st.gennorm,st.genexpon,st.lognorm,st.lomax,st.maxwell,st.mielke,st.nakagami,st.ncx2,st.ncf,
+    st.nct,st.norm,st.powerlognorm, st.uniform, st.poisson]
+    
+    #DISTRIBUTIONS = [st.norm, st.uniform, st.poisson,st.expon]
 
     # Best holders
-    best_distribution = st.norm
-    best_params = (0.0, 1.0)
+    best_distribution : st.stats
+    best_params : tuple
     best_sse = np.inf
 
     # Estimate distribution parameters from data
@@ -121,55 +118,59 @@ def make_pdf(dist, params, size=10000):
 
     return pdf
 
-#%%
-
-# Load data from statsmodels datasets
-RawData = pd.read_csv('Data_OilCompany.csv')
-#RawData = pd.read_csv('Data_OilCompany10records.csv')
-
-
-#data=RawData
-
-#Index(['  Year 1  ', '  Year 2  ', '  Year 3  ', '  Year 4  ', '  Year 5  '], dtype='object')
-
-#Test Year 2
-data=RawData.iloc[:,1]
-#data=float(data.replace("-",0))
-
-#data=pd.DataFrame(b[:,7])
+def main():
+    # Load data from statsmodels datasets
+    RawData = pd.read_csv('Data_OilCompany.csv')
+    #RawData = pd.read_csv('Data_OilCompany10records.csv')
 
 
-#%%
-# Plot for comparison
-plt.figure(figsize=(12,8))
-ax = data.plot(kind='hist', bins=200, density=True, alpha=0.5)
+    #data=RawData
 
-# Save plot limits
-dataYLim = ax.get_ylim()
+    #Index(['  Year 1  ', '  Year 2  ', '  Year 3  ', '  Year 4  ', '  Year 5  '], dtype='object')
 
-# Find best fit distribution
-best_fit_name, best_fit_params = best_fit_distribution(data, 200, ax)
-best_dist = getattr(st, best_fit_name)
+    #Test Year 2
+    data=RawData.iloc[:,1]
+    #data=float(data.replace("-",0))
 
-# Update plots
-ax.set_ylim(dataYLim)
-ax.set_title(u'Data\n All Fitted Distributions')
-ax.set_xlabel(u'%')
-ax.set_ylabel('Frequency')
+    #data=pd.DataFrame(b[:,7])
 
-# Make PDF with best params 
-pdf = make_pdf(best_dist, best_fit_params)
+    # Plot for comparison
+    plt.figure(figsize=(12,8))
+    ax = data.plot(kind='hist', bins=200, density=True, alpha=0.5)
 
-# Display
-plt.figure(figsize=(12,8))
-ax = pdf.plot(lw=2, label='PDF', legend=True)
-data.plot(kind='hist', bins=50, density=True, alpha=0.5, label='Data', legend=True, ax=ax)
+    # Save plot limits
+    dataYLim = ax.get_ylim()
 
-param_names = (best_dist.shapes + ', loc, scale').split(', ') if best_dist.shapes else ['loc', 'scale']
-param_str = ', '.join(['{}={:0.2f}'.format(k,v) for k,v in zip(param_names, best_fit_params)])
-dist_str = '{}({})'.format(best_fit_name, param_str)
+    # Find best fit distribution
+    best_fit_name, best_fit_params = best_fit_distribution(data, 200, ax)
+    best_dist = getattr(st, best_fit_name)
 
-ax.set_title(u'Data with best fit distribution \n' + dist_str)
-ax.set_xlabel(u'%')
-ax.set_ylabel('Frequency')
+    # Update plots
+    ax.set_ylim(dataYLim)
+    ax.set_title(u'Data\n All Fitted Distributions')
+    ax.set_xlabel(u'%')
+    ax.set_ylabel('Frequency')
+
+    # Make PDF with best params
+    pdf = make_pdf(best_dist, best_fit_params)
+
+    # Display
+    plt.figure(figsize=(12,8))
+    ax = pdf.plot(lw=2, label='PDF', legend=True)
+    data.plot(kind='hist', bins=50, density=True, alpha=0.5, label='Data', legend=True, ax=ax)
+
+    param_names = (best_dist.shapes + ', loc, scale').split(', ') if best_dist.shapes else ['loc', 'scale']
+    param_str = ', '.join(['{}={:0.2f}'.format(k,v) for k,v in zip(param_names, best_fit_params)])
+    dist_str = '{}({})'.format(best_fit_name, param_str)
+
+    ax.set_title(u'Data with best fit distribution \n' + dist_str)
+    ax.set_xlabel(u'%')
+    ax.set_ylabel('Frequency')
+
+
+if __name__ == "__main__":
+    # main()
+    print(type(st.norm))
+    
+    pass
 
