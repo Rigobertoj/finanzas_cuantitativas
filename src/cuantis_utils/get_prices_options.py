@@ -7,12 +7,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
+import numpy as np
 import pandas as pd
 import yfinance as yf
 
 YAHOO_OPTIONS_BASE = "https://query1.finance.yahoo.com/v7/finance/options"
-DEFAULT_DB_PATH = Path("../data/options/option_chain_history.sqlite")
+_MODULE_DIR = Path(__file__).resolve().parent
+_SRC_DIR = _MODULE_DIR.parent
+_REPO_ROOT = _SRC_DIR.parent
+_DEFAULT_OPTIONS_DIR = _SRC_DIR / "data" / "options"
 
+DEFAULT_DB_PATH = _DEFAULT_OPTIONS_DIR / "option_chain_history.sqlite"
+DEFAULT_CACHE_DIR = _DEFAULT_OPTIONS_DIR / ".yfinance_cache"
+
+#Tabla de donde se optiene los precios de las opciones
 TABLE_NAME = "option_chain_snapshots"
 
 SNAPSHOT_COLUMNS = [
@@ -51,6 +59,50 @@ NUMERIC_COLUMNS = [
     "implied_volatility",
     "underlying_price",
 ]
+
+
+def resolve_db_path(
+    db_path: str | Path | None = None,
+    must_exist: bool = False,
+) -> Path:
+    """Resolve a DB path robustly across scripts/notebooks with different cwd."""
+    input_path = DEFAULT_DB_PATH if db_path is None else Path(db_path).expanduser()
+
+    if input_path.is_absolute():
+        resolved = input_path.resolve()
+        if must_exist and not resolved.exists():
+            raise FileNotFoundError(f"No existe el archivo SQLite: {resolved}")
+        return resolved
+
+    candidate_paths = [
+        (Path.cwd() / input_path).resolve(),
+        (_SRC_DIR / input_path).resolve(),
+        (_REPO_ROOT / input_path).resolve(),
+        DEFAULT_DB_PATH.resolve(),
+    ]
+
+    # If only filename was provided, prefer the default options folder.
+    if input_path.parent == Path("."):
+        candidate_paths.append((_DEFAULT_OPTIONS_DIR / input_path.name).resolve())
+
+    for candidate in candidate_paths:
+        if candidate.exists():
+            return candidate
+
+    fallback = candidate_paths[-1]
+    if must_exist:
+        joined_candidates = "\n".join(f"- {path}" for path in candidate_paths)
+        raise FileNotFoundError(
+            "No se encontro el archivo SQLite en rutas candidatas:\n"
+            f"{joined_candidates}\n"
+            "Usa `resolve_db_path(...)` o pasa una ruta absoluta valida."
+        )
+    return fallback
+
+
+def get_default_db_path() -> Path:
+    """Return the canonical project path for option-chain SQLite storage."""
+    return DEFAULT_DB_PATH.resolve()
 
 
 def _utc_now_iso() -> str:
@@ -100,7 +152,7 @@ def _normalize_rows(rows: list[dict]) -> pd.DataFrame:
 @dataclass
 class OptionChainDownloader:
     timeout_seconds: float = 30.0
-    yfinance_cache_dir: Path | str = Path("../data/options/.yfinance_cache")
+    yfinance_cache_dir: Path | str = DEFAULT_CACHE_DIR
 
     def __post_init__(self) -> None:
         cache_dir = Path(self.yfinance_cache_dir)
@@ -320,11 +372,93 @@ class OptionChainRepository:
     table_name: str = TABLE_NAME
 
     def __post_init__(self) -> None:
-        self.db_path = Path(self.db_path)
+        self.db_path = resolve_db_path(self.db_path, must_exist=False)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.db_path)
+
+    def _table_exists(self) -> bool:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                (self.table_name,),
+            ).fetchone()
+        return row is not None
+
+    def _load_latest_snapshot_for_ticker(self, ticker: str) -> pd.DataFrame:
+        query = f"""
+            SELECT *
+            FROM {self.table_name}
+            WHERE ticker = ?
+              AND snapshot_utc = (
+                  SELECT MAX(snapshot_utc)
+                  FROM {self.table_name}
+                  WHERE ticker = ?
+              )
+            ORDER BY expiration_date, option_type, strike, contract_symbol;
+        """
+        with self._connect() as conn:
+            return pd.read_sql_query(query, conn, params=[ticker, ticker])
+
+    @staticmethod
+    def _normalize_for_comparison(df_snapshot: pd.DataFrame) -> pd.DataFrame:
+        compare_columns = [
+            col
+            for col in SNAPSHOT_COLUMNS
+            if col not in {"snapshot_utc", "downloaded_at_utc", "source"}
+        ]
+        df_cmp = df_snapshot.copy()
+        for col in compare_columns:
+            if col not in df_cmp.columns:
+                df_cmp[col] = None
+        df_cmp = df_cmp[compare_columns]
+
+        # Keep a stable order before comparison.
+        df_cmp = df_cmp.sort_values(
+            ["expiration_date", "option_type", "strike", "contract_symbol"]
+        ).reset_index(drop=True)
+
+        for col in compare_columns:
+            if col in NUMERIC_COLUMNS:
+                # Round to avoid tiny float representation differences.
+                df_cmp[col] = pd.to_numeric(df_cmp[col], errors="coerce").round(8)
+            elif col == "in_the_money":
+                df_cmp[col] = df_cmp[col].apply(
+                    lambda x: None if pd.isna(x) else int(bool(x))
+                )
+            else:
+                df_cmp[col] = df_cmp[col].astype("string")
+
+        # Canonicalize nulls so equality is deterministic.
+        return df_cmp.replace({np.nan: None, pd.NA: None})
+
+    def is_snapshot_unchanged(self, df_snapshot: pd.DataFrame) -> bool:
+        """Return True when snapshot content equals latest stored snapshot for ticker."""
+        if df_snapshot.empty:
+            return True
+        if not self._table_exists():
+            return False
+
+        tickers = (
+            pd.Series(df_snapshot.get("ticker", pd.Series(dtype="string")))
+            .dropna()
+            .astype(str)
+            .str.upper()
+            .unique()
+            .tolist()
+        )
+        if len(tickers) != 1:
+            raise ValueError("Se espera un snapshot de un solo ticker para comparar cambios.")
+        ticker = tickers[0]
+
+        latest = self._load_latest_snapshot_for_ticker(ticker)
+        if latest.empty:
+            return False
+
+        incoming_cmp = self._normalize_for_comparison(df_snapshot)
+        latest_cmp = self._normalize_for_comparison(latest)
+        return incoming_cmp.equals(latest_cmp)
 
     def ensure_schema(self) -> None:
         create_table_sql = f"""
@@ -365,11 +499,18 @@ class OptionChainRepository:
             )
             conn.commit()
 
-    def insert_snapshot(self, df_snapshot: pd.DataFrame) -> int:
+    def insert_snapshot(
+        self,
+        df_snapshot: pd.DataFrame,
+        skip_if_unchanged: bool = True,
+    ) -> int:
         if df_snapshot.empty:
             return 0
 
         self.ensure_schema()
+        if skip_if_unchanged and self.is_snapshot_unchanged(df_snapshot):
+            return 0
+
         df_to_insert = df_snapshot.copy()
         for column in SNAPSHOT_COLUMNS:
             if column not in df_to_insert.columns:
@@ -400,12 +541,73 @@ def fetch_option_chain_snapshot(ticker: str) -> pd.DataFrame:
 def update_option_chain_history(
     ticker: str,
     db_path: str | Path = DEFAULT_DB_PATH,
+    skip_if_unchanged: bool = True,
 ) -> tuple[pd.DataFrame, int]:
     downloader = OptionChainDownloader()
     repository = OptionChainRepository(db_path=db_path)
     snapshot = downloader.fetch_snapshot(ticker=ticker)
-    inserted = repository.insert_snapshot(snapshot)
+    inserted = repository.insert_snapshot(snapshot, skip_if_unchanged=skip_if_unchanged)
     return snapshot, inserted
+
+
+def read_option_chain_history(
+    db_path: str | Path = DEFAULT_DB_PATH,
+    ticker: str | None = None,
+    latest_snapshot_only: bool = False,
+    table_name: str = TABLE_NAME,
+) -> pd.DataFrame:
+    """Read option-chain history from SQLite with safe path resolution."""
+    resolved_db_path = resolve_db_path(db_path, must_exist=True)
+
+    where_parts: list[str] = []
+    params: list[object] = []
+
+    if ticker is not None:
+        ticker_clean = ticker.strip().upper()
+        if not ticker_clean:
+            raise ValueError("`ticker` no puede ser vacio.")
+        where_parts.append("ticker = ?")
+        params.append(ticker_clean)
+
+    where_sql = ""
+    if where_parts:
+        where_sql = "WHERE " + " AND ".join(where_parts)
+
+    if latest_snapshot_only:
+        if ticker is None:
+            query = f"""
+                SELECT *
+                FROM {table_name}
+                WHERE snapshot_utc = (SELECT MAX(snapshot_utc) FROM {table_name})
+                ORDER BY ticker, expiration_date, option_type, strike;
+            """
+        else:
+            query = f"""
+                SELECT *
+                FROM {table_name}
+                WHERE ticker = ?
+                  AND snapshot_utc = (
+                      SELECT MAX(snapshot_utc)
+                      FROM {table_name}
+                      WHERE ticker = ?
+                  )
+                ORDER BY expiration_date, option_type, strike;
+            """
+            params = [params[0], params[0]]
+    else:
+        query = f"""
+            SELECT *
+            FROM {table_name}
+            {where_sql}
+            ORDER BY snapshot_utc DESC, expiration_date, option_type, strike;
+        """
+
+    with sqlite3.connect(resolved_db_path) as conn:
+        df = pd.read_sql_query(query, conn, params=params if params else None)
+        df["snapshot_utc"] = pd.to_datetime(df["snapshot_utc"]).dt.date
+        df["last_trade_date_utc"] = pd.to_datetime(df["last_trade_date_utc"]).dt.date
+        df["downloaded_at_utc"] = pd.to_datetime(df["downloaded_at_utc"]).dt.date
+        return df
 
 
 if __name__ == "__main__":
@@ -418,11 +620,17 @@ if __name__ == "__main__":
         default=str(DEFAULT_DB_PATH),
         help="Ruta del archivo SQLite de salida.",
     )
+    parser.add_argument(
+        "--allow-duplicate-snapshots",
+        action="store_true",
+        help="Inserta snapshot aunque no cambie respecto al ultimo guardado.",
+    )
     args = parser.parse_args()
 
     df_snapshot, inserted_count = update_option_chain_history(
         ticker=args.ticker,
         db_path=args.db_path,
+        skip_if_unchanged=not args.allow_duplicate_snapshots,
     )
 
     print(df_snapshot.head(10))
