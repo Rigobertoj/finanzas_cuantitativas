@@ -1,0 +1,142 @@
+---
+title: "Model 1"
+subtitle: "Tarea 4 - 5"
+author:
+  - name: "Rigoberto J. Martinez Madriz"
+    affiliations:
+      - name: "ITESO"
+      - name: "Quantitative Finance"
+  - name: "Kaysi Fuentes Piña"
+    affiliations:
+      - name: "ITESO"
+      - name: "Quantitative Finance"
+date: "2025-02-17"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: right
+    toc-title: "Contenido"
+    self-contained: true
+  pdf:
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenido"
+number-sections: true
+---
+
+```{python}
+import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from scipy import stats
+import yfinance as yf
+
+from dotenv import load_dotenv
+import os
+import sys
+```
+
+```{python}
+pd.options.display.float_format = '{:,.2f}'.format
+```
+
+```{python}
+load_dotenv()  # carga .env
+sys.path.insert(0, os.path.join(os.environ["CUANTIS_ROOT"], "src"))
+```
+
+```{python}
+# CVX
+tickets = ["CVX"]
+
+start_date = "2016-02-11"
+end_date = "2026-02-17"
+```
+
+```{python}
+prices = yf.download(tickets, start_date, end_date)["Close"]
+prices.head(3)
+```
+
+```{python}
+returns = prices.pct_change().dropna()
+returns["r"] = np.log(prices["CVX"]) - np.log(prices["CVX"].shift(1))
+returns.columns = ["R", "r"]
+returns.head(3)
+```
+
+```{python}
+S0 = prices["CVX"].iloc[-1]
+S0
+
+mu_R = returns["R"].mean()
+sigma_R = returns["R"].std()
+
+T = 365
+t = 0
+
+S0
+```
+
+
+```{python}
+muX = np.log(S0) + (mu_R - 0.5*sigma_R**2)*(T-t)
+
+sigmaX = sigma_R*np.sqrt(T-t)
+```
+
+```{python}
+sigmaX
+```
+
+```{python}
+## Probabilidad P(S>40)
+x_i = np.log(200)
+
+z = (x_i- muX) / sigmaX
+z
+```
+
+```{python}
+Z = stats.norm(loc = 0, scale = 1)
+
+P40 = Z.cdf(z)
+P40
+```
+
+```{python}
+np.exp(muX)
+```
+
+```{python}
+np.exp(sigmaX)
+```
+
+```{python}
+Z2 = stats.norm(loc = np.exp(muX), scale = np.exp(sigmaX))
+
+P40 = Z2.cdf(x_i)
+P40
+```
+
+
+```{python}
+mu_R_annual = (1 + mu_R) ** 365 -1
+sigma_R_annual = mu_R * np.sqrt(252)
+
+T = 1
+t = 0
+
+muX_annual = np.log(S0) + mu_R_annual - (0.5*sigma_R_annual**2)*(T-t)
+
+sigmaX_annual = sigma_R_annual*np.sqrt(T-t)
+
+Z3 = stats.norm(loc = muX_annual, scale = sigmaX_annual)
+P40 = Z3.cdf(np.log(x_i))
+P40
+```
+
