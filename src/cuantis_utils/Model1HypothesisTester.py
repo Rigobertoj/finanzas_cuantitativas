@@ -8,7 +8,10 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from .TestDistribuitions import best_fit_distribution, make_pdf, DEFAULT_DISTRIBUTIONS
+if __package__:
+    from .TestDistribuitions import best_fit_distribution, make_pdf, DEFAULT_DISTRIBUTIONS
+else:
+    from TestDistribuitions import best_fit_distribution, make_pdf, DEFAULT_DISTRIBUTIONS
 
 
 @dataclass(frozen=True)

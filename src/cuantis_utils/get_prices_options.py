@@ -606,7 +606,6 @@ def read_option_chain_history(
         df = pd.read_sql_query(query, conn, params=params if params else None)
         df["snapshot_utc"] = pd.to_datetime(df["snapshot_utc"]).dt.date
         df["last_trade_date_utc"] = pd.to_datetime(df["last_trade_date_utc"]).dt.date
-        df["downloaded_at_utc"] = pd.to_datetime(df["downloaded_at_utc"]).dt.date
         return df
 
 
