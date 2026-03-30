@@ -1,0 +1,49 @@
+---
+title: "Presentation Quantitative Finance"
+subtitle: "Introduction to Quantitative Finance"
+author:   
+    - name: "Rigoberto J. Martinez Madriz"
+date: "2025-03-29"
+format:
+  html:
+    html-math-method: mathml
+    toc: true
+    toc-depth: 3
+    toc-location: right
+    toc-title: "Contenido"
+    self-contained: true
+  pdf:
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenido"
+number-sections: true
+---
+
+# Quantitative Finance
+
+Las finanzas comienzan con una situación muy simple: hoy las personas intercambian activos cuyo **valor** futuro no está completamente determinado. Eso significa que hay tiempo, incetidumbre y decisiones. 
+
+Las finanzas estudian como los agentes intercambian activos y riesgos bajo condiciones de escasez, e incertidumbre. Como los agentes toman decisiones hoy donde los resultados económcos relevantes ocurren mañana. Entre el momento de la decisión y el momento del resultado aparece un elemento inevitable: **la incertidumbre**.
+
+Si mañana fuera completamente conocido, conocer el valor de los activos en cada momento sería una tarea sencilla. Si supieramos cuánto pagará algo en el futuro, su precio (valor) hoy sería, en escencia, el valor descontado de ese flujo cierto. **Valuar** no sería otra cosa que descontar al valor presente el valor del activo en el futuro. Por tanto, conociendo el valor futuros de los activos podriamos tomar la mejor decisión hoy y esperar el desenlace econocmico conocido.
+
+Sin embargo, en el marco de las finanzas casi nunca decidimos en un entorno perfectamente conocido. Es por esto que requerimos de herramientas que nos ayuden a modelar de forma precisa las decisiones financieras.
+
+Es aquí donde nace una de las ramas de la **ingenieria financiera** más utilez en el contexto de la toma de decisiones bajo incertidumbre: Las **finanzas cuantitativas**, las cuales nos ayuda a imponer una estructura lógica y matemática a problemas en los que el futuro no esta completamente determinado.
+
+Es decir, las finanzas cuantitativas no van solo de valuación o derivados financieros, sino de un **marco en la toma de decisiones economicas bajo incertidumbre**. Este marco nos ofrece una linea de ataque para esta clase de problemas, donde primero se identifica el problema financiero, después se localiza sus fuentes de incetidumbre, luego se traduce esa incertidumbre en riesgo y, finalmente, se construye un modelo útil para decidir.
+
+Esta es la idea central de todo el marco de las fianzas cuantitativas, no sustituyen el juicio del invesionista, solo lo estructuran y diciplinan de acuerdo a un modelo que le parmite tomar las mejores decisiones bajo incetidumbre.
+
+# Un problema financiero
+
+
+# Empresas, estructuras financieras y mercados de capitales
+
+
+
+# De la incertidumbre al riesgo
+
+
+
+#
