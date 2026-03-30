@@ -1,0 +1,417 @@
+---
+title: "Model 1"
+subtitle: "Tarea 4 - 5"
+author:
+  - name: "Rigoberto J. Martinez Madriz"
+    affiliations:
+      - name: "ITESO"
+      - name: "Quantitative Finance"
+  - name: "Kaysi Fuentes Piña"
+    affiliations:
+      - name: "ITESO"
+      - name: "Quantitative Finance"
+date: "2025-02-17"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: right
+    toc-title: "Contenido"
+    self-contained: true
+  pdf:
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenido"
+number-sections: true
+
+---
+
+# 4. Validation of null hypothesis from stocks returns
+
+In this notebook, we evaluate several null hypotheses related to stock returns and their statistical properties for the selected asset.
+
+- First, we test whether the variance of arithmetic returns and log returns is the same using Levene’s test.
+- Second, we test whether the mean difference between arithmetic and log returns is statistically significant (using a paired-test framework).
+- Third, we fit candidate probability distributions to both return series and compare their goodness of fit to assess whether the normality assumption is appropriate.
+
+These steps help us validate key assumptions commonly used in return modeling and financial analysis.
+
+```{python}
+import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from scipy import stats
+import yfinance as yf
+
+from dotenv import load_dotenv
+import os
+import sys
+```
+
+```{python}
+pd.options.display.float_format = '{:,.2f}'.format
+```
+
+```{python}
+load_dotenv()  # carga .env
+sys.path.insert(0, os.path.join(os.environ["CUANTIS_ROOT"], "src"))
+```
+
+```{python}
+# CVX
+tickets = ["CVX"]
+
+start_date = "2016-02-11"
+end_date = "2026-02-11"
+```
+
+```{python}
+prices = yf.download(tickets, start_date, end_date)["Close"]
+```
+
+```{python}
+prices["CVX_ln"] = np.log(prices["CVX"])
+prices.head(3)
+```
+
+```{python}
+returns = pd.DataFrame()
+```
+
+```{python}
+returns["R"] = prices["CVX"].pct_change().dropna()
+
+returns["r"] = prices["CVX_ln"] - prices["CVX_ln"].shift(1)
+
+returns.head(5)
+```
+
+```{python}
+plt.plot(returns["R"])
+
+plt.title("Arithmetic Returns")
+plt.xlabel("Time")
+plt.ylabel("Return")
+plt.show()
+```
+
+```{python}
+plt.plot(returns["r"])
+
+plt.show()
+```
+
+## Test 1: Variances test
+
+```{python}
+alpha = 0.05
+
+w, p_value = stats.levene(returns["R"], returns["r"])
+
+if p_value < alpha:
+    print("Varianzas diferentes")
+else:
+    print("Varianzas iguales")
+```
+
+## Test 2: Mean test
+
+```{python}
+w, p_value = stats.ttest_ind(returns["R"]-returns["r"], 0)
+
+if p_value < alpha:
+    print("Medias diferentes")
+else:
+    print("Medias iguales")
+```
+
+since the test is failed, we need test if the following relations is hold
+
+$$
+R_t - \frac{\sigma^2}{2} = r_t
+$$
+
+whether the above ecuation is true. Then it implice that
+
+$$
+R_t \neq r_t
+$$
+
+So, we continue with our stock model
+
+```{python}
+r_t = returns["R"] - ((returns["R"]**2)/2)
+```
+
+```{python}
+w, p_value = stats.ttest_ind(r_t, returns["R"])
+
+if p_value < 0.05:
+    print("Medias diferentes")
+else:
+    print("Medias iguales")
+```
+
+So, we could said that both means are equal and we continue with our process
+
+## Test 3: ML test over data
+
+Using the Maximun Likelihood to estimate the best distributions from the data.
+
+This test will help us to find which distributions have the best fit from the data to calculate probabilities and validate assumptions
+
+$$
+L(\theta; x_1,\dots,x_n) \;=\; \prod_{i=1}^{n} f(x_i\mid \theta)
+$$
+
+```{python}
+from cuantis_utils.TestDistribuitions import best_fit_distribution, DEFAULT_DISTRIBUTIONS
+```
+
+```{python}
+test_distributions = DEFAULT_DISTRIBUTIONS[:60]
+```
+
+```{python}
+name_best_distribution_R, best_params_dist_R = best_fit_distribution(returns["R"], distributions=test_distributions)
+name_best_distribution_R, best_params_dist_R
+```
+
+```{python}
+name_best_distribution_r, best_params_dist_r = best_fit_distribution(returns["r"], distributions=test_distributions)
+name_best_distribution_r, best_params_dist_r
+```
+
+### PDF
+
+```{python}
+from cuantis_utils.TestDistribuitions import make_pdf
+```
+
+```{python}
+best_dist_R = getattr(stats, name_best_distribution_R)
+best_dist_r = getattr(stats, name_best_distribution_r)
+```
+
+```{python}
+pdf_R = make_pdf(best_dist_R, best_params_dist_R, size = 4000)
+pdf_r = make_pdf(best_dist_r, best_params_dist_r, size = 4000)
+```
+
+```{python}
+ax = pd.Series(returns["R"]).plot(kind="hist", bins=60, density=True, alpha=0.4, label="Returns")
+pdf_R.plot(ax=ax, lw=2, label=f"PDF ajustada: {name_best_distribution_R}")
+ax.legend()
+plt.show()
+```
+
+```{python}
+ax = pd.Series(returns["r"]).plot(kind="hist", bins=60, density=True, alpha=0.4, label="log-normal Returns")
+pdf_r.plot(ax=ax, lw=2, label=f"PDF ajustada: {name_best_distribution_r}")
+ax.legend()
+plt.show()
+```
+
+The results show that both arithmetic and logarithmic returns are better fitted by an nct (non-central t) distribution than by a normal distribution. Although the tests were applied correctly and produced favorable results in terms of the statistical procedure, this suggests that, for the selected asset, log returns do not fully satisfy the normality assumption. Even so, the nct distribution is related to the normal family and can be interpreted as an extension that better captures these deviations.
+
+# 5. Implement Model 1 and Random walk
+
+Implement Model 1 in python and develop a single random walk. Use the same stock as in Homework 4.1 to get the parameters for the model: µ, σ.
+
+- Add a plot to show the stock’s historical prices and your random walk from model 1.
+- Feel free to add mores plots that you consider relevant
+- Perform the hypothesis tests from previous homework to the random walk.
+- Draw some conclusions
+
+After the result from the fit distribution of the returns, we could use the normal distribution.
+
+```{python}
+S0 = prices.iloc[0,0]
+
+mu = returns["R"].mean()
+sigma = returns["R"].std()
+```
+
+```{python}
+k = len(prices)
+```
+
+```{python}
+results_model = np.zeros(k)
+
+results_model[0] = S0
+```
+
+```{python}
+results_model
+```
+
+## Model 1
+
+This model is describe by the following ecuation
+
+$$
+S_t = S_0e^{(\mu - \frac{1}{2}\sigma^2) +  \sigma W_t}
+$$
+
+```{python}
+#Random Walk
+W = np.random.normal(loc = 0, scale = 1, size = k)
+W
+```
+
+```{python}
+for i in range(1, k):
+    results_model[i] = results_model[i-1] * ( np.exp(mu - 0.5*sigma**2) + sigma*W[i-1])
+```
+
+```{python}
+results_model = pd.DataFrame(results_model, index=prices["CVX"].index, columns=["Simulation"])
+
+results_model.head(3)
+```
+
+```{python}
+df_plot = pd.concat([results_model, prices["CVX"]], axis=1)
+df_plot
+```
+
+```{python}
+plt.figure(figsize=(12,5))
+
+df_plot.plot(title="Adj Close vs Model")
+ax.set_xlabel("Index")
+ax.set_ylabel("Value")
+ax.grid(True, alpha=0.3)
+```
+
+```{python}
+def step_stock_price(steps : int, S0 : float):
+    result = np.zeros(steps)
+    result[0] = S0
+    return result
+
+
+def simulation_step(simulations : int, steps : int, S0 : float):
+    return [step_stock_price(steps,S0) for simulation in range(simulations)]
+
+
+def simulations_stock_price(prices : pd.Series, simulations : int = 100, steps : int = 1000):
+    S0 = prices.iloc[0]
+    
+    returns = prices.pct_change().dropna()
+    
+    mu = returns.mean()
+    sigma = returns.std()
+    
+    result_model = simulation_step(simulations, steps, S0)
+    
+    W = [np.random.normal(loc = 0, scale = 1, size = steps) for i in range(simulations)]
+
+    for simulation in range(simulations):
+        for step in range(1, steps):
+            mu_model = np.exp(mu - 0.5*sigma**2)
+            sigma_model = sigma*W[simulation][step - 1]
+            result_model[simulation][step] =  result_model[simulation][step-1] * (mu_model + sigma_model)
+    
+    return np.array(result_model)
+```
+
+```{python}
+asset = prices["CVX"]
+
+results_simulations_model = simulations_stock_price(asset, simulations=100, steps=len(asset))
+```
+
+```{python}
+df_results_simulations_model = pd.DataFrame(results_simulations_model.T, index = prices.CVX.index)
+df_results_simulations_model.head()
+```
+
+```{python}
+df_plot = pd.concat([asset, df_results_simulations_model], axis = 1)
+df_plot
+```
+
+The real trayectory from the price of CVX asset is the black line
+
+```{python}
+plt.figure()
+
+ax = df_plot.plot(figsize=(12,5), title="Adj Close vs Model", legend=False, alpha=0.3, color="blue")
+df_plot["CVX"].plot(ax = ax, color = "black", lw = 2, label = "CVX")
+
+ax.set_xlabel("Time")
+ax.set_ylabel("Price")
+ax.grid(True, alpha=0.3)
+plt.show()
+```
+
+## Test hypothesis over Random Walk
+
+```{python}
+from cuantis_utils.Model1HypothesisTester import Model1HypothesisTester
+```
+
+```{python}
+random_walk_model = df_plot.iloc[:, 1]
+```
+
+```{python}
+random_walk_tester = Model1HypothesisTester(price_series=random_walk_model, distributions=test_distributions)
+random_walk_returns = Model1HypothesisTester(price_series=random_walk_model, distributions=test_distributions)
+```
+
+### Test 1: Variances test
+
+```{python}
+# Leven Test fomr variance equality
+
+random_walk_test_variance = random_walk_tester.test_variance_equality()
+random_walk_test_variance.p_value, random_walk_test_variance.decision
+```
+
+### Test 2: Mean test
+
+```{python}
+# Ttest mean are different
+
+random_walk_test_mean = random_walk_tester.test_mean_difference()
+random_walk_test_mean.p_value, random_walk_test_mean.decision
+```
+
+```{python}
+returns_random_walk = random_walk_tester._get_returns()
+```
+
+```{python}
+r_t = returns_random_walk["R"] - ((returns_random_walk["R"]**2)/2)
+
+w, p_value = stats.ttest_ind(r_t, returns["R"])
+
+if p_value < 0.05:
+    print("Medias diferentes")
+else:
+    print("Medias iguales")
+```
+
+### Test 3: ML test over data
+
+```{python}
+random_walk_name_dist = random_walk_tester.fit_distributions()
+random_walk_name_dist["name_best_distribution_R"]
+```
+
+```{python}
+random_walk_tester.plot_fitted_distributions()
+plt.show()
+```
+
+## Conclutions
+
+In section 5 you implement “Model 1” for stock prices using CVX. The code sets the initial price `S0` and calibrates `μ` and `σ` from the historical arithmetic returns (`R`) via their sample mean and standard deviation. With these parameters it generates a random walk (one path and then multiple simulated paths) and overlays them against the real adjusted close series. This comparison shows how a single simulated path can drift far from the realized trajectory; in your run the simulated level ends well below the observed price (e.g., 2026-02-10: ~75.93 vs ~182.26), highlighting both the intrinsic variability of the process and the limitations of calibrating the model only through historical mean and volatility.
+
+You then run hypothesis tests on the random walk: Levene’s test does not indicate different variances between `R` and `r` (p≈0.992), but the mean test on `(R−r)` strongly rejects a zero mean (p≈8.46×10⁻214), meaning arithmetic and log returns are not interchangeable on average. The additional small-return approximation check `r_t ≈ R_t − R_t^2/2` does not detect a mean difference versus `R` in that sample (“equal means”). Finally, distribution fitting selects `loggamma` as the best fit for simulated `R`, supporting the idea that Gaussian assumptions are a convenient baseline but can miss heavy tails. A key modeling caveat is the price update rule: the random shock is placed outside the exponential term (unlike standard GBM), which materially changes the dynamics and therefore the interpretation of fit and test outcomes.
