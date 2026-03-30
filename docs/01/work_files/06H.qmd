@@ -1,0 +1,531 @@
+---
+title: "HW 6: Modelos 5"
+subtitle: "Tarea 6"
+author:
+  - name: "Rigoberto J. Martinez Madriz"
+    affiliations:
+      - name: "ITESO"
+      - name: "Quantitative Finance"
+  - name: "Keysi Fuentes Piña"
+    affiliations:
+      - name: "ITESO"
+      - name: "Quantitative Finance"
+date: "2025-03-01"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: right
+    toc-title: "Contenido"
+    self-contained: true
+  pdf:
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenido"
+number-sections: true
+---
+
+## Convenciones (para que las cuentas sean consistentes)
+
+Trabajaremos con incrementos y su paso a diferenciales:
+
+$$
+\Delta S_t := S_{t+\Delta t}-S_t,
+\qquad
+\Delta f := f(S_{t+\Delta t})-f(S_t),
+\qquad
+\Delta t \to 0 \Rightarrow (\Delta t,\Delta S_t,\Delta f)\to (dt,dS_t,df).
+$$
+
+Además, usaremos las reglas estándar del cálculo de Itô (en el sentido de orden de magnitud):
+
+$$
+(dt)^2=0,\qquad dt\,dW_t=0,\qquad (dW_t)^2=dt.
+$$
+
+En particular, todo término de orden estrictamente mayor que $dt$ se descarta (por ejemplo $dt^2$, $dt\,dW_t$, $dW_t^3$, etc.).
+
+---
+
+## 1. (Univariada, $k=3$) Taylor para $f(S_t)$ y aplicación a $f(S_t)=\ln(S_t)$
+
+### 1.1 Taylor de orden 3
+
+Sea $f(S_t)$ una función suficientemente diferenciable y tomemos un punto base $S_1$ y un punto cercano $S_t$.
+
+La expansión de Taylor alrededor de $S_1$ hasta orden $k=3$ es:
+
+$$
+f(S_t)
+=
+f(S_1)
++ \frac{\partial f(S_1)}{\partial S_t}(S_t-S_1)
++ \frac{1}{2!}\frac{\partial^{2} f(S_1)}{\partial S_t^{2}}(S_t-S_1)^{2}
++ \frac{1}{3!}\frac{\partial^{3} f(S_1)}{\partial S_t^{3}}(S_t-S_1)^{3}.
+$$
+
+Si $S_t \to S_1$, entonces definimos:
+
+$$
+S_t-S_1=\Delta S_t,
+\qquad
+f(S_t)-f(S_1)=\Delta f(S_t).
+$$
+
+Por tanto:
+
+$$
+\Delta f(S_t)
+=
+\frac{\partial f(S_1)}{\partial S_t}\Delta S_t
++ \frac{1}{2!}\frac{\partial^{2} f(S_1)}{\partial S_t^{2}}(\Delta S_t)^{2}
++ \frac{1}{3!}\frac{\partial^{3} f(S_1)}{\partial S_t^{3}}(\Delta S_t)^{3}.
+$$
+
+Cuando $\Delta S_t \to 0$:
+
+$$
+\Delta S_t=dS_t,
+\qquad
+\Delta f(S_t)=df(S_t).
+$$
+
+Sustituyendo:
+
+$$
+df(S_t)
+=
+\frac{\partial f(S_t)}{\partial S_t}dS_t
++ \frac{1}{2!}\frac{\partial^{2} f(S_t)}{\partial S_t^{2}}(dS_t)^{2}
++ \frac{1}{3!}\frac{\partial^{3} f(S_t)}{\partial S_t^{3}}(dS_t)^{3}.
+$$
+
+### 1.2 Caso particular: $f(S_t)=\ln(S_t)$
+
+Derivadas (exactamente como en tus notas, solo estandarizando el símbolo $S$):
+
+$$
+\frac{d}{dS_t}\ln(S_t)=\frac{1}{S_t},
+\qquad
+\frac{d^{2}}{dS_t^{2}}\ln(S_t)=-\frac{1}{S_t^{2}},
+\qquad
+\frac{d^{3}}{dS_t^{3}}\ln(S_t)=\frac{2}{S_t^{3}}.
+$$
+
+Entonces:
+
+$$
+d\ln(S_t)
+=
+\frac{1}{S_t}dS_t
++ \frac{1}{2!}\left(-\frac{1}{S_t^{2}}\right)(dS_t)^{2}
++ \frac{1}{3!}\left(\frac{2}{S_t^{3}}\right)(dS_t)^{3}.
+$$
+
+
+### 1.3 Sustitución del proceso de difusión (GBM) y expansión completa
+
+Tomamos el proceso de difusión:
+
+$$
+dS_t=(\mu_R)S_tdt+S_t\sigma dW_t.
+$$
+
+Sustituyendo en la expresión anterior:
+
+$$
+\begin{aligned}
+d\ln(S_t)
+&=
+\frac{1}{S_t}\Big[(\mu_R)S_tdt + S_t\sigma dW_t\Big]
+-\frac{1}{2S_t^{2}}\Big[(\mu_R)S_tdt + S_t\sigma dW_t\Big]^{2}
++\frac{1}{6}\Big[(\mu_R)S_tdt + S_t\sigma dW_t\Big]^{3}.
+\end{aligned}
+$$
+
+Primeros términos:
+
+$$
+\frac{1}{S_t}\Big[(\mu_R)S_tdt + S_t\sigma dW_t\Big]
+=
+\mu_Rdt+\sigma dW_t.
+$$
+
+Ahora expandimos el cuadrado:
+
+$$
+\begin{aligned}
+\Big[(\mu_R)S_tdt + S_t\sigma dW_t\Big]^2
+&=
+(\mu_RS_tdt)^{2}+2(\mu_RS_tdt)(S_t\sigma dW_t)+(S_t\sigma dW_t)^{2} \\
+&=
+\mu_R^{2}S_t^{2}dt^{2}
++2\mu_R\sigma S_t^{2}dt\,dW_t
++S_t^{2}\sigma^{2}dW_t^{2}.
+\end{aligned}
+$$
+
+Aplicando Itô:
+
+$$
+dt^{2}=0,\qquad dt\,dW_t=0,\qquad dW_t^{2}=dt
+\quad\Rightarrow\quad
+\Big[(\mu_R)S_tdt + S_t\sigma dW_t\Big]^2 = S_t^{2}\sigma^{2}dt.
+$$
+
+Ahora expandimos el cubo:
+
+$$
+\begin{aligned}
+\Big[(\mu_R)S_tdt + S_t\sigma dW_t\Big]^3
+&=
+(\mu_RS_tdt)^{3}
++3(\mu_RS_tdt)^{2}(S_t\sigma dW_t)
++3(\mu_RS_tdt)(S_t\sigma dW_t)^{2}
++(S_t\sigma dW_t)^{3}.
+\end{aligned}
+$$
+
+Reescribiendo cada término por orden:
+
+- $(\mu_RS_tdt)^3$ es proporcional a $dt^3$ y se descarta.
+- $3(\mu_RS_tdt)^2(S_t\sigma dW_t)$ es proporcional a $dt^2 dW_t$ y se descarta.
+- $3(\mu_RS_tdt)(S_t\sigma dW_t)^2$ es proporcional a $dt(dW_t^2)=dt(dt)=dt^2$ y se descarta.
+- $(S_t\sigma dW_t)^3$ es proporcional a $dW_t^3=dW_t(dW_t^2)=dW_tdt$ y se descarta.
+
+Por tanto:
+
+$$
+\Big[(\mu_R)S_tdt + S_t\sigma dW_t\Big]^3 = 0
+\quad\text{(en el cálculo de Itô, al truncar a orden }dt\text{)}.
+$$
+
+Sustituyendo todo:
+
+$$
+\begin{aligned}
+d\ln(S_t)
+&=
+\Big[\mu_Rdt+\sigma dW_t\Big]
+-\frac{1}{2S_t^{2}}\Big[S_t^{2}\sigma^{2}dt\Big]
++\frac{1}{6}\Big[0\Big].
+\end{aligned}
+$$
+
+Y finalmente:
+
+$$
+d\ln(S_t)
+=
+\Big[\mu_R-\frac{1}{2}\sigma^{2}\Big]dt+\sigma dW_t.
+$$
+
+
+### 1.4 Por qué “desaparecen” los términos con $k>2$ 
+
+Sabemos que podemos expresar el diferencial de una función como:
+
+$$
+df(S_t)
+=
+\frac{\partial f(S_t)}{\partial S}dS_t
++\frac{1}{2!}\frac{\partial^{2}f(S_t)}{\partial S^{2}}(dS_t)^{2}
++\frac{1}{3!}\frac{\partial^{3}f(S_t)}{\partial S^{3}}(dS_t)^{3}
++\frac{1}{4!}\frac{\partial^{4}f(S_t)}{\partial S^{4}}(dS_t)^{4}
++\ldots
+$$
+
+y que “si $(dS_t)^3=0$ entonces todo lo demás también”.
+
+La forma rigurosa de decirlo en Itô es: **solo conservamos términos hasta orden $dt$**.  
+Como $dS_t=\mu S_tdt+\sigma S_t dW_t$, se tiene que:
+
+$$
+(dS_t)^2 = (\sigma S_t)^2(dW_t)^2 = \sigma^2 S_t^2 dt,
+$$
+
+y cualquier potencia $(dS_t)^k$ con $k\ge 3$ es de orden mayor que $dt$ (por ejemplo $dt^{3/2}$ o $dt^2$), por lo que se descarta en la expansión de Itô:
+
+$$
+(dS_t)^k = 0
+\quad\text{(en el sentido de truncación de Itô a orden }dt\text{), para }k>2.
+$$
+
+
+## 2.Taylor para $f(S_t,t)$ y caso $dS_t=S_t\sigma dW_t$
+
+### 2.1 Taylor de orden 2
+
+Sea $f(S,t)$ una función continua y diferenciable, con punto base $(S_1,t_1)$ y punto cercano $(S_t,t)$.
+
+$$
+\begin{aligned}
+f(S_t,t)
+&=
+f(S_1,t_1)
++\frac{\partial f(S_1,t_1)}{\partial S_t}(S_t-S_1)
++\frac{\partial f(S_1,t_1)}{\partial t}(t-t_1) \\
+&\quad
++\frac{1}{2!}\Big[
+\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}(S_t-S_1)^{2}
++\frac{\partial^{2}f(S_1,t_1)}{\partial t^{2}}(t-t_1)^{2}
++2\frac{\partial^{2}f(S_1,t_1)}{\partial S_t\partial t}(S_t-S_1)(t-t_1)
+\Big].
+\end{aligned}
+$$
+
+Cuando $t_1\to t$ y $S_1\to S_t$, definimos:
+
+$$
+t-t_1=\Delta t,\qquad S_t-S_1=\Delta S_t,\qquad f(S_t,t)-f(S_1,t_1)=\Delta f(S_t,t).
+$$
+
+Por tanto:
+
+$$
+\begin{aligned}
+\Delta f(S_t,t)
+&=
+\frac{\partial f(S_1,t_1)}{\partial S_t}\Delta S_t
++\frac{\partial f(S_1,t_1)}{\partial t_t}\Delta t \\
+&\quad
++\frac{1}{2!}\Big[
+\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}(\Delta S_t)^{2}
++\frac{\partial^{2}f(S_1,t_1)}{\partial t^{2}}(\Delta t)^{2}
++2\frac{\partial^{2}f(S_1,t_1)}{\partial S_t\partial t}(\Delta S_t)(\Delta t)
+\Big].
+\end{aligned}
+$$
+
+Al pasar al límite $\Delta t\to 0$:
+
+$$
+\Delta t=dt,\qquad \Delta S_t=dS_t,\qquad \Delta f(S_t,t)=df(S_t,t),
+$$
+
+obtenemos:
+
+$$
+\begin{aligned}
+df(S_t,t)
+&=
+\frac{\partial f(S_t,t)}{\partial S_t}dS_t
++\frac{\partial f(S_t,t)}{\partial t}dt \\
+&\quad
++\frac{1}{2}\Big[
+\frac{\partial^{2}f(S_t,t)}{\partial S_t^{2}}(dS_t)^{2}
++\frac{\partial^{2}f(S_t,t)}{\partial t^{2}}(dt)^{2}
++2\frac{\partial^{2}f(S_t,t)}{\partial S_t\partial t}(dS_t)(dt)
+\Big].
+\end{aligned}
+$$
+
+Por Itô, $(dt)^2=0$ y $(dS_t)(dt)=0$, entonces queda:
+
+$$
+df(S_t,t)
+=
+\frac{\partial f(S_t,t)}{\partial S}dS_t
++\frac{\partial f(S_t,t)}{\partial t}dt
++\frac{1}{2}\frac{\partial^{2}f(S_t,t)}{\partial S^{2}}(dS_t)^{2}.
+$$
+
+### 2.2 Sustituyendo $dS_t=S_t\sigma dW_t$
+
+Si el proceso de difusión es:
+
+$$
+dS_t=S_t\sigma dW_t,
+$$
+
+entonces:
+
+$$
+(dS_t)^2=(S_t\sigma dW_t)^2=S_t^{2}\sigma^{2}(dW_t)^2=S_t^{2}\sigma^{2}dt.
+$$
+
+Sustituyendo:
+
+$$
+df(S_t,t)
+=
+\frac{\partial f(S_t,t)}{\partial S_T}dS_t
++\frac{\partial f(S_t,t)}{\partial t}dt
++\frac{1}{2}\frac{\partial^{2}f(S_t,t)}{\partial S_t^{2}}(S_t^{2}\sigma^{2}dt).
+$$
+
+Equivalente (forma final, sin cambiar contenido):
+
+$$
+df(S_t,t)
+=
+\Big[
+\frac{\partial f(S_t,t)}{\partial t}
++\frac{1}{2}\frac{\partial^{2}f(S_t,t)}{\partial S_t^{2}}(S_t^{2}\sigma^{2})
+\Big]dt     
++\frac{\partial f(S_t,t)}{\partial S}dS_t.
+$$
+
+---
+
+## 3. (Bivariada, $k=2$) Caso con drift: $dS_t=\mu S_t^3+\big(\tfrac12\big)dt+\sigma^3 dW_t$
+
+Repetimos exactamente la misma estructura del punto 2 (Taylor bivariada de orden 2).  
+
+### 3.1 Taylor de orden 2
+
+Sea $f(S_t,t)$ una función continua con $S_1,t_1\in\mathbb{R}^{+}$ y $k=2$.
+
+$$
+\begin{aligned}
+f(S_t,t)
+&=
+f(S_1,t_1)
++\frac{\partial f(S_1,t_1)}{\partial S_t}(S_t-S_1)
++\frac{\partial f(S_1,t_1)}{\partial t}(t-t_1) \\
+&\quad
++\frac{1}{2!}\Big[
+\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}(S_t-S_1)^{2}
++\frac{\partial^{2}f(S_1,t_1)}{\partial t^{2}}(t-t_1)^{2}
++2\frac{\partial^{2}f(S_1,t_1)}{\partial S_t\partial t}(S_t-S_1)(t-t_1)
+\Big]
+\end{aligned}
+$$
+
+Ahora si $t_1 \to t\ \Rightarrow\ t-t_1=\Delta t;\ S_t-S_1=\Delta S_t;\ f(S_t,t)-f(S_1,t_1)=\Delta f(S_t,t)$.
+
+Por tanto,
+
+$$
+\begin{aligned}
+\Delta f(S_t,t)
+&=
+\frac{\partial f(S_1,t_1)}{\partial S_t}\Delta S_t
++\frac{\partial f(S_1,t_1)}{\partial t}\Delta t \\
+&\quad
++\frac{1}{2}\Big[
+\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}(\Delta S_t)^{2}
++\frac{\partial^{2}f(S_1,t_1)}{\partial t^{2}}(\Delta t)^{2}
++\frac{\partial^{2}f(S_1,t_1)}{\partial S_t\partial t}(\Delta S_t)(\Delta t)
+\Big]
+\end{aligned}
+$$
+
+Entonces si $\Delta t \to 0 \Rightarrow \Delta t=dt;\ \Delta S_t=dS_t;\ \Delta f(S_t,t)=df(S_t,t)$.
+
+Por tanto,
+
+$$
+\begin{aligned}
+df(S_t,t)
+&=
+\frac{\partial f(S_1,t_1)}{\partial S_t}dS_t
++\frac{\partial f(S_1,t_1)}{\partial t}dt \\
+&\quad
++\frac{1}{2}\Big[
+\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}(dS_t)^{2}
++\frac{\partial^{2}f(S_1,t_1)}{\partial t^{2}}(dt)^{2}
++\frac{\partial^{2}f(S_1,t_1)}{\partial S_t\partial t}(dS_t)(dt)
+\Big]
+\end{aligned}
+$$
+
+### 3.2 Sustituyendo $dS_t=\mu S_t^{3}+\sigma^{3}dW_t+\frac{1}{2}dt$
+
+como sabemos el proceso de difusión
+
+$$
+dS_t=\mu S_t^{3}+\sigma^{3}dW_t+\frac{1}{2}dt
+$$
+
+Aplicado en el proceso anterior tenemos que
+
+$$
+\begin{aligned}
+df(S_t,t)
+&=
+\frac{\partial f(S_1,t_1)}{\partial S_t}dS_t
++\frac{\partial f(S_1,t_1)}{\partial t}dt \\
+&\quad
++\frac{1}{2}\Big[
+\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}
+\Big(\mu S_t^{3}+\sigma^{3}dW_t+\frac{1}{2}dt\Big)^{2}
++\frac{\partial f(S_1,t_1)}{\partial S_t\partial t}
+\Big(\mu S_t^{3}+\sigma^{3}dW_t+\frac{1}{2}dt\Big)(dt)
+\Big]
+\end{aligned}
+$$
+
+donde
+
+$$
+\begin{aligned}
+1.-\Big(\mu S_t^{3}+\sigma^{3}dW_t+\frac{1}{2}dt\Big)^{2}
+&=
+(\mu S_t^{3})^{2}+(\sigma^{3}dW_t)^{2}+\Big(\frac{1}{2}dt\Big)^{2}
++2\mu S_t^{3}\sigma^{3}dW_t \\
+&\quad
++2\mu S_t^{3}\frac{1}{2}dt
++2\frac{1}{2}\sigma^{3}dW_tdt \\
+&=
+(\mu S_t^{3})^{2}+\sigma^{6}dt+2\mu S_t^{3}+\mu S_t^{3}dt
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+2.-\Big(\mu S_t^{3}+\sigma^{3}dW_t+\frac{1}{2}dt\Big)(dt)
+&=
+\mu S_t^{3}dt+\sigma^{3}dW_tdt+\frac{1}{2}dtdt \\
+&=
+\mu S_t^{3}dt
+\end{aligned}
+$$
+
+Sustituyendo, tenemos que
+
+$$
+\begin{aligned}
+df(S_t,t)
+&=
+\frac{\partial f(S_1,t_1)}{\partial S_t}dS_t
++\frac{\partial f(S_1,t_1)}{\partial t}dt \\
+&\quad
++\frac{1}{2}\Big[
+\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}
+\Big((\mu S_t^{3})^{2}+\sigma^{6}dt+2\mu S_t^{3}+\mu S_t^{3}dt\Big)
++\frac{\partial f(S_1,t_1)}{\partial S_t\partial t}\mu S_t^{3}dt
+\Big]
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+df(S_t,t)
+&=
+\frac{\partial f(S_1,t_1)}{\partial S_t}dS_t
++\frac{\partial f(S_1,t_1)}{\partial t}dt
++\frac{1}{2}\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}\mu^{2}S_t^{6}
++\frac{1}{2}\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}\sigma^{6}dt \\
+&\quad
++\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}\mu S_t^{3}
++\frac{1}{2}\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}\mu S_t^{3}dt
++\frac{\partial f(S_1,t_1)}{\partial S_t\partial t}\mu S_t^{3}dt
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+&=
+\Big[
+\frac{\partial f(S_1,t_1)}{\partial t}
++\frac{1}{2}\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}\sigma^{6}
++\frac{1}{2}\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}\mu S^{3}
++\frac{\partial f(S_1,t_1)}{\partial S_t\partial t}\mu S^{3}
+\Big]dt \\
+&\quad
++\frac{\partial f(S_1,t_1)}{\partial S_t}dS_t
++\frac{1}{2}\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}\mu^{2}S^{6}
++\frac{\partial^{2}f(S_1,t_1)}{\partial S_t^{2}}\mu S_t^{3}
+\end{aligned}
+$$
