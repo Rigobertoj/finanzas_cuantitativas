@@ -1,0 +1,515 @@
+---
+title: "Valuación de una opción binaria call asset-or-nothing"
+lang: es
+author:   
+    - name: "Rigoberto J. Martinez Madriz"
+date: "2025-04-07"
+format:
+  pdf:
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenido"
+number-sections: true
+---
+
+# Valuación de una opción binaria call asset-or-nothing
+
+Como se asume que el precio del subyacente sigue un movimiento geométrico browniano bajo la medida neutral al riesgo, partimos del proceso
+
+$$
+dS_t = rS_t\,dt + \sigma S_t\,dW_t^{\mathbb{Q}},
+$$
+
+donde $r$ es la tasa libre de riesgo y $\sigma$ es la volatilidad del activo subyacente.
+
+Ahora bien, como estamos trabajando bajo la medida neutral al riesgo, la valuación del derivado se obtiene como el **valor presente del valor esperado de su payoff al vencimiento**. Por tanto, si denotamos por $f_t$ el valor de la opción en el tiempo $t$, entonces
+
+$$
+f_t = e^{-r(T-t)} \mathbb{E}^{\mathbb{Q}}\left[f(S_T,T)\mid \mathcal{F}_t\right].
+$$
+
+En este caso, la opción que se está valuando es una **binary call option asset-or-nothing**, por lo que su payoff al vencimiento está dado por
+
+$$
+f(S_T,T)=
+\begin{cases}
+S_T, & \text{si } S_T \geq K,\\
+0, & \text{si } S_T < K.
+\end{cases}
+$$
+
+## Paso 1. Pasar a la variable logarítmica
+
+Como ya sabemos, cuando el precio sigue un GBM resulta más natural trabajar con el logaritmo del precio. Definimos entonces
+
+$$
+X_t=\ln(S_t).
+$$
+
+Una simple aplicanción del lema de Itô a la función $\ln(S_t)$, obtenemos
+
+$$
+dX_t=\left(r-\frac{1}{2}\sigma^2\right)dt+\sigma\,dW_t^{\mathbb{Q}}.
+$$
+
+Integrando entre $t$ y $T$, se sigue que
+
+$$
+X_T=X_t+\left(r-\frac{1}{2}\sigma^2\right)(T-t)+\sigma\left(W_T^{\mathbb{Q}}-W_t^{\mathbb{Q}}\right).
+$$
+
+Como
+
+$$
+W_T^{\mathbb{Q}}-W_t^{\mathbb{Q}} \sim N(0,T-t),
+$$
+
+como la única fuente de incertidumbre se encuentra en el termino $W_T^{\mathbb{Q}}$ y este se distribuye de manera normal, esto implica que
+
+$$
+X_T\mid \mathcal{F}_t \sim N\left(\ln(S_t)+\left(r-\frac{1}{2}\sigma^2\right)(T-t),\sigma^2(T-t)\right).
+$$
+
+Si definimos
+
+$$
+\mu_X=\ln(S_t)+\left(r-\frac{1}{2}\sigma^2\right)(T-t)
+$$
+
+y
+
+$$
+\sigma_X^2=\sigma^2(T-t),
+$$
+
+entonces podemos escribir de forma compacta
+
+$$
+X_T\mid \mathcal{F}_t \sim N(\mu_X,\sigma_X^2).
+$$
+
+## Paso 2. Reescribir el payoff en términos de $X_T$
+
+Como $S_T=e^{X_T}$ y además la condición $S_T \geq K$ es equivalente a $\ln(S_T)\geq \ln(K)$, entonces el payoff puede reescribirse en términos de la variable logarítmica como
+
+$$
+f(X_T,T)=
+\begin{cases}
+e^{X_T}, & \text{si } X_T \geq \ln(K),\\
+0, & \text{si } X_T < \ln(K).
+\end{cases}
+$$
+
+Por tanto, la fórmula de valuación se transforma en
+
+$$
+f_t=e^{-r(T-t)}\mathbb{E}^{\mathbb{Q}}\left[f(X_T,T)\mid \mathcal{F}_t\right].
+$$
+
+Y sustituyendo la forma explícita del payoff, se obtiene
+
+$$
+f_t=
+e^{-r(T-t)}
+\mathbb{E}^{\mathbb{Q}}
+\left[
+\begin{cases}
+e^{X_T}, & \text{si } X_T \geq \ln(K),\\
+0, & \text{si } X_T < \ln(K)
+\end{cases}
+\Biggm| \mathcal{F}_t
+\right].
+$$
+
+Como ya conocemos la distribución de $X_T$, ahora sí podemos expandir esta esperanza como una integral respecto de su densidad.
+
+## Paso 3. Escribir la esperanza como integral
+
+La densidad de $X_T$ es
+
+$$
+p_{X_T}(x)=
+\frac{1}{\sqrt{2\pi\sigma^2(T-t)}}
+\exp\left(
+-\frac{(x-\mu_X)^2}{2\sigma^2(T-t)}
+\right).
+$$
+
+Entonces,
+
+$$
+f_t=
+e^{-r(T-t)}
+\left[
+\int_{-\infty}^{\ln(K)} 0 \cdot p_{X_T}(x)\,dx
++
+\int_{\ln(K)}^{\infty} e^x p_{X_T}(x)\,dx
+\right].
+$$
+
+Como el primer término es cero, queda simplemente
+
+$$
+f_t=
+e^{-r(T-t)}
+\int_{\ln(K)}^{\infty} e^x p_{X_T}(x)\,dx.
+$$
+
+Sustituyendo la densidad de $X_T$, obtenemos
+
+$$
+f_t=
+e^{-r(T-t)}
+\int_{\ln(K)}^{\infty}
+e^x
+\frac{1}{\sqrt{2\pi\sigma^2(T-t)}}
+\exp\left(
+-\frac{(x-\mu_X)^2}{2\sigma^2(T-t)}
+\right)
+dx.
+$$
+
+O, de manera completamente explícita,
+
+$$
+f_t=
+e^{-r(T-t)}
+\int_{\ln(K)}^{\infty}
+e^x
+\frac{1}{\sigma\sqrt{2\pi(T-t)}}
+\exp\left(
+-\frac{\left(x-\ln(S_t)-\left(r-\frac{1}{2}\sigma^2\right)(T-t)\right)^2}{2\sigma^2(T-t)}
+\right)
+dx.
+$$
+
+Con la integral ya definida, ahora el problema consiste en resolverla. Para ello proponemos un cambio de variable.
+
+## Paso 4. Primer cambio de variable
+
+Definimos
+
+$$
+u=
+\frac{x-\mu_X}{\sigma\sqrt{T-t}}.
+$$
+
+Es decir,
+
+$$
+u=
+\frac{x-\ln(S_t)-\left(r-\frac{1}{2}\sigma^2\right)(T-t)}{\sigma\sqrt{T-t}}.
+$$
+
+Ahora despejamos $x$:
+
+$$
+x=\mu_X+\sigma\sqrt{T-t}\,u.
+$$
+
+Derivando respecto de $u$, se obtiene
+
+$$
+dx=\sigma\sqrt{T-t}\,du.
+$$
+
+### Límites de integración
+
+Cuando $x=\ln(K)$, entonces
+
+$$
+u=
+\frac{\ln(K)-\ln(S_t)-\left(r-\frac{1}{2}\sigma^2\right)(T-t)}{\sigma\sqrt{T-t}}.
+$$
+
+Este término puede reescribirse como
+
+$$
+u=
+-\frac{\ln\left(\frac{S_t}{K}\right)+\left(r-\frac{1}{2}\sigma^2\right)(T-t)}{\sigma\sqrt{T-t}}.
+$$
+
+Definimos entonces
+
+$$
+d_2=
+\frac{\ln\left(\frac{S_t}{K}\right)+\left(r-\frac{1}{2}\sigma^2\right)(T-t)}{\sigma\sqrt{T-t}},
+$$
+
+de modo que el límite inferior queda como
+
+$$
+u=-d_2.
+$$
+
+Por otra parte, cuando $x\to\infty$, claramente se tiene que $u\to\infty$.
+
+Sustituyendo todo en la integral, se obtiene
+
+$$
+f_t=
+e^{-r(T-t)}
+\int_{-d_2}^{\infty}
+e^{\mu_X+\sigma\sqrt{T-t}\,u}
+\frac{1}{\sigma\sqrt{2\pi(T-t)}}
+\exp\left(-\frac{u^2}{2}\right)
+\sigma\sqrt{T-t}\,du.
+$$
+
+Cancelando los términos comunes, queda
+
+$$
+f_t=
+e^{-r(T-t)}
+\int_{-d_2}^{\infty}
+\frac{1}{\sqrt{2\pi}}
+\exp\left(
+\mu_X+\sigma\sqrt{T-t}\,u-\frac{u^2}{2}
+\right)
+du.
+$$
+
+## Paso 5. Separar el término determinista
+
+Sustituimos ahora el valor de $\mu_X$:
+
+$$
+\mu_X=\ln(S_t)+\left(r-\frac{1}{2}\sigma^2\right)(T-t).
+$$
+
+Entonces el exponente dentro de la integral queda como
+
+$$
+\ln(S_t)+\left(r-\frac{1}{2}\sigma^2\right)(T-t)+\sigma\sqrt{T-t}\,u-\frac{u^2}{2}.
+$$
+
+Por tanto,
+
+$$
+f_t=
+e^{-r(T-t)}
+\int_{-d_2}^{\infty}
+\frac{1}{\sqrt{2\pi}}
+\exp\left(
+\ln(S_t)+\left(r-\frac{1}{2}\sigma^2\right)(T-t)+\sigma\sqrt{T-t}\,u-\frac{u^2}{2}
+\right)
+du.
+$$
+
+Sacamos del integrando los términos que no dependen de $u$:
+
+$$
+f_t=
+e^{-r(T-t)}
+e^{\ln(S_t)+\left(r-\frac{1}{2}\sigma^2\right)(T-t)}
+\int_{-d_2}^{\infty}
+\frac{1}{\sqrt{2\pi}}
+\exp\left(
+\sigma\sqrt{T-t}\,u-\frac{u^2}{2}
+\right)
+du.
+$$
+
+Ahora simplificamos el factor que quedó fuera de la integral:
+
+$$
+e^{-r(T-t)}
+e^{\ln(S_t)+\left(r-\frac{1}{2}\sigma^2\right)(T-t)}
+=
+e^{\ln(S_t)-\frac{1}{2}\sigma^2(T-t)}.
+$$
+
+Y como $e^{\ln(S_t)}=S_t$, entonces
+
+$$
+f_t=
+S_t e^{-\frac{1}{2}\sigma^2(T-t)}
+\int_{-d_2}^{\infty}
+\frac{1}{\sqrt{2\pi}}
+\exp\left(
+\sigma\sqrt{T-t}\,u-\frac{u^2}{2}
+\right)
+du.
+$$
+
+## Paso 6. Completar cuadrado en el exponente
+
+Ahora nos concentramos en el exponente
+
+$$
+\sigma\sqrt{T-t}\,u-\frac{u^2}{2}.
+$$
+
+Si incorporamos el término externo $e^{-\frac{1}{2}\sigma^2(T-t)}$ dentro del exponente, obtenemos
+
+$$
+-\frac{1}{2}\sigma^2(T-t)+\sigma\sqrt{T-t}\,u-\frac{u^2}{2}.
+$$
+
+Reordenando,
+
+$$
+-\frac{u^2}{2}+\sigma\sqrt{T-t}\,u-\frac{1}{2}\sigma^2(T-t).
+$$
+
+Ahora completamos cuadrado. Observemos que
+
+$$
+\left(u-\sigma\sqrt{T-t}\right)^2
+=
+u^2-2\sigma\sqrt{T-t}\,u+\sigma^2(T-t).
+$$
+
+Multiplicando por $-\frac{1}{2}$,
+
+$$
+-\frac{1}{2}\left(u-\sigma\sqrt{T-t}\right)^2
+=
+-\frac{u^2}{2}+\sigma\sqrt{T-t}\,u-\frac{1}{2}\sigma^2(T-t).
+$$
+
+Por tanto,
+
+$$
+-\frac{1}{2}\sigma^2(T-t)+\sigma\sqrt{T-t}\,u-\frac{u^2}{2}
+=
+-\frac{1}{2}\left(u-\sigma\sqrt{T-t}\right)^2.
+$$
+
+Sustituyendo esto en la integral, queda
+
+$$
+f_t=
+S_t
+\int_{-d_2}^{\infty}
+\frac{1}{\sqrt{2\pi}}
+\exp\left(
+-\frac{1}{2}\left(u-\sigma\sqrt{T-t}\right)^2
+\right)
+du.
+$$
+
+Hasta aquí ya resolvimos la parte más delicada del desarrollo. Sin embargo, todavía conviene hacer un segundo cambio de variable para reconocer la integral como una función de distribución normal estándar.
+
+## Paso 7. Segundo cambio de variable
+
+Definimos
+
+$$
+z=u-\sigma\sqrt{T-t}.
+$$
+
+Entonces
+
+$$
+dz=du.
+$$
+
+Ahora evaluamos los nuevos límites.
+
+Cuando $u\to\infty$, entonces también $z\to\infty$.
+
+Cuando $u=-d_2$, entonces
+
+$$
+z=-d_2-\sigma\sqrt{T-t}.
+$$
+
+Definimos ahora
+
+$$
+d_1=d_2+\sigma\sqrt{T-t}.
+$$
+
+Por lo tanto, el límite inferior se transforma en
+
+$$
+z=-d_1.
+$$
+
+Además, si desarrollamos esta definición, obtenemos
+
+$$
+d_1=
+\frac{\ln\left(\frac{S_t}{K}\right)+\left(r-\frac{1}{2}\sigma^2\right)(T-t)}{\sigma\sqrt{T-t}}
++\sigma\sqrt{T-t}.
+$$
+
+Llevando todo al mismo denominador,
+
+$$
+d_1=
+\frac{\ln\left(\frac{S_t}{K}\right)+\left(r-\frac{1}{2}\sigma^2\right)(T-t)+\sigma^2(T-t)}{\sigma\sqrt{T-t}}.
+$$
+
+Simplificando,
+
+$$
+d_1=
+\frac{\ln\left(\frac{S_t}{K}\right)+\left(r+\frac{1}{2}\sigma^2\right)(T-t)}{\sigma\sqrt{T-t}}.
+$$
+
+Entonces la integral queda
+
+$$
+f_t=
+S_t
+\int_{-d_1}^{\infty}
+\frac{1}{\sqrt{2\pi}}
+e^{-z^2/2}\,dz.
+$$
+
+## Paso 8. Reconocer la función de distribución normal
+
+Recordemos que la función de distribución acumulada de una normal estándar se define como
+
+$$
+N(x)=\int_{-\infty}^{x}\frac{1}{\sqrt{2\pi}}e^{-z^2/2}\,dz.
+$$
+
+Por simetría de la densidad normal estándar, se tiene que
+
+$$
+\int_{-d_1}^{\infty}\frac{1}{\sqrt{2\pi}}e^{-z^2/2}\,dz = N(d_1).
+$$
+
+Por tanto, finalmente obtenemos
+
+$$
+f_t=S_tN(d_1),
+$$
+
+donde
+
+$$
+d_1=
+\frac{\ln\left(\frac{S_t}{K}\right)+\left(r+\frac{1}{2}\sigma^2\right)(T-t)}{\sigma\sqrt{T-t}}.
+$$
+
+## Resultado final
+
+Así, el valor de una **binary call option asset-or-nothing** bajo el modelo de Black-Scholes es
+
+$$
+f_t=S_tN(d_1),
+$$
+
+con
+
+$$
+d_1=
+\frac{\ln\left(\frac{S_t}{K}\right)+\left(r+\frac{1}{2}\sigma^2\right)(T-t)}{\sigma\sqrt{T-t}}
+$$
+
+y, de manera complementaria,
+
+$$
+d_2=
+\frac{\ln\left(\frac{S_t}{K}\right)+\left(r-\frac{1}{2}\sigma^2\right)(T-t)}{\sigma\sqrt{T-t}}.
+$$
+
+## Comentario de cierre
+
+La lógica del resultado tiene sentido. Esta opción no paga una cantidad fija en efectivo, sino que entrega el activo subyacente siempre que al vencimiento el precio haya quedado por encima del strike. Por eso, al final la prima queda expresada como $S_tN(d_1)$.
+
+En otras palabras, la estructura de esta valuación refleja simultáneamente el valor actual del activo subyacente y la probabilidad neutral al riesgo de que la opción termine en la región donde ejerce, ajustada por la distribución lognormal del precio bajo el modelo de Black-Scholes.
