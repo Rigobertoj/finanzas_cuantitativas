@@ -18,10 +18,14 @@ __pycache__/
 # Local secrets/config
 .env
 .env.*
+.codex
 
 # OS/editor noise
 .DS_Store
 Thumbs.db
+
+# LaTeX Workshop build artifacts
+**/build/
 
 # Generated options market data (daily snapshots)
 src/data/options/
