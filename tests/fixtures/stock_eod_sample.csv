@@ -1,0 +1,3 @@
+ticker,date,open,high,low,close,volume,source,downloaded_at_utc
+amzn,2026-04-01,184.20,187.40,183.50,185.20,32000000,ThetaData,2026-04-02T00:00:00Z
+cvx,2026-04-01,158.10,160.00,157.75,159.30,9500000,ThetaData,2026-04-02T00:00:00Z
