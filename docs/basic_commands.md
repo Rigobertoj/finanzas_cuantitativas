@@ -1,21 +1,21 @@
 # Latex
 
-scripts/render_tex.sh docs/01/notes/02.valuation.tex
+scripts/render_tex.sh course_notes/01/notes/02.valuation.tex
 
-scripts/render_tex.sh docs/01/notes/02.valuation.tex xelatex
+scripts/render_tex.sh course_notes/01/notes/02.valuation.tex xelatex
 
-scripts/render_tex.sh docs/01/notes/02.valuation.tex lualatex
+scripts/render_tex.sh course_notes/01/notes/02.valuation.tex lualatex
 
 
 ## Comandos para renderizar
 
-scripts/render_tex.sh --publish-parent docs/01/notes/02.valuation.tex
+scripts/render_tex.sh --publish-parent course_notes/01/notes/02.valuation.tex
 
 # Comandos ThetaData
 
 ThetaData v3 requiere que Theta Terminal este corriendo en la maquina local. El
-notebook `src/proyect/clean_data.ipynb` ya esta preparado para consumir la API
-HTTP local en:
+notebook legado `course_notes/legacy_projects/option_hedging_original/clean_data.ipynb`
+ya esta preparado para consumir la API HTTP local en:
 
 ```bash
 http://127.0.0.1:25503/v3
@@ -107,7 +107,8 @@ curl "http://127.0.0.1:25503/v3/option/snapshot/greeks/all?symbol=AAPL&expiratio
 
 ## 6. Descargar varios subyacentes desde Python
 
-Patron compatible con las funciones de `src/proyect/clean_data.ipynb`:
+Patron compatible con las funciones del notebook legado
+`course_notes/legacy_projects/option_hedging_original/clean_data.ipynb`:
 
 ```python
 tickers = ["AAPL", "AMZN", "CVX"]
