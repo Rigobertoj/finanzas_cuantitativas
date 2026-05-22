@@ -30,3 +30,7 @@ Thumbs.db
 
 # Generated options market data (daily snapshots)
 src/data/options/
+
+# Local SQLite data stores
+data/sqlite/*.sqlite
+data/sqlite/*.sqlite-*
