@@ -1,0 +1,19 @@
+{
+  "database_path": "data/sqlite/backtesting.sqlite",
+  "tickers": ["AAPL"],
+  "start_date": "20260518",
+  "end_date": "20260520",
+  "selection": {
+    "option_type": "call",
+    "min_dte": 30,
+    "max_dte": 60,
+    "target_moneyness": 1.0
+  },
+  "assumptions": {
+    "risk_free_rate": 0.045,
+    "day_count": "ACT/365",
+    "realized_volatility_window": 20,
+    "annualization_factor": 252,
+    "rebalance_frequency": "daily"
+  }
+}
