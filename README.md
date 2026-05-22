@@ -89,6 +89,25 @@ quantitative analysis:
 - Scientific libraries for numerical computation and financial modeling.
 
 
+## DEVELOPMENT IMPORTS
+
+The project uses a `src/` layout. Install it in editable mode from the
+repository root before working from notebooks or external folders:
+
+```bash
+python3 -m pip install -e .
+```
+
+After that, import the project modules with:
+
+```python
+from modulos.data_sources import ThetaDataOptions
+```
+
+Do not use `from src.modulos...`; `src` is the source layout folder, not the
+public Python package.
+
+
 ## EXPECTED OUTCOMES
 
 By the end of this project, the repository aims to:

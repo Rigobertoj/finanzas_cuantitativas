@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cuantitativas"
+version = "0.1.0"
+description = "Infraestructura modular para investigacion cuantitativa y estrategias con opciones."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "pandas",
+    "requests",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
