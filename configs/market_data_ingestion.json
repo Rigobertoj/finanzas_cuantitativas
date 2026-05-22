@@ -1,0 +1,14 @@
+{
+  "provider": "ThetaData",
+  "database_path": "data/sqlite/backtesting.sqlite",
+  "tickers": ["AAPL"],
+  "start_date": "20260518",
+  "end_date": "20260520",
+  "option_filters": {
+    "expiration": "*",
+    "right": "both",
+    "strike": "*",
+    "strike_range": 1,
+    "max_dte": 30
+  }
+}
