@@ -56,13 +56,13 @@ def validate_option_eod(df: pd.DataFrame) -> pd.DataFrame:
     _normalize_ticker(result)
     _normalize_option_type(result, OPTION_EOD_CONTRACT.name)
     reject_duplicate_key(result, OPTION_EOD_CONTRACT)
-    require_positive(
+    require_positive(result, ("strike", "mid", "underlying_price"), OPTION_EOD_CONTRACT.name)
+    require_non_negative(
         result,
-        ("strike", "mid", "last_price", "underlying_price"),
+        ("bid", "ask", "last_price", "volume", "open_interest"),
         OPTION_EOD_CONTRACT.name,
     )
-    require_non_negative(result, ("bid", "ask", "volume", "open_interest"), OPTION_EOD_CONTRACT.name)
-    _require_expiration_after_date(result, OPTION_EOD_CONTRACT.name)
+    _require_expiration_not_before_date(result, OPTION_EOD_CONTRACT.name)
     _require_ask_greater_or_equal_bid(result)
     _require_mid_between_bid_ask(result)
     return result
@@ -99,10 +99,10 @@ def _require_high_greater_or_equal_low(df: pd.DataFrame) -> None:
             raise ValueError("StockEOD.high must be greater than or equal to low.")
 
 
-def _require_expiration_after_date(df: pd.DataFrame, contract_name: str) -> None:
-    rows = df["expiration_date"] <= df["date"]
+def _require_expiration_not_before_date(df: pd.DataFrame, contract_name: str) -> None:
+    rows = df["expiration_date"] < df["date"]
     if rows.any():
-        raise ValueError(f"{contract_name}.expiration_date must be after date.")
+        raise ValueError(f"{contract_name}.expiration_date must not be before date.")
 
 
 def _require_ask_greater_or_equal_bid(df: pd.DataFrame) -> None:
