@@ -127,3 +127,45 @@ class RunManifest:
             raise ValueError(
                 f"RunManifest.results is missing tickers: {missing_results}."
             )
+
+
+@dataclass(frozen=True)
+class HedgingDatasetManifest:
+    """Audit record for one generated hedging dataset."""
+
+    dataset_id: str
+    source_run_id: str | None
+    pipeline_name: str
+    status: str
+    created_at_utc: str
+    tickers: tuple[str, ...]
+    params: dict[str, Any]
+    rows_written: int
+    errors: list[dict[str, str]]
+
+    def validate(self) -> None:
+        """Validate manifest completeness before persistence."""
+
+        required_text = {
+            "dataset_id": self.dataset_id,
+            "pipeline_name": self.pipeline_name,
+            "status": self.status,
+            "created_at_utc": self.created_at_utc,
+        }
+        missing = [name for name, value in required_text.items() if not str(value).strip()]
+        if missing:
+            raise ValueError(
+                f"HedgingDatasetManifest is missing required fields: {missing}."
+            )
+        if self.status not in {"success", "partial", "failed"}:
+            raise ValueError(
+                "HedgingDatasetManifest.status must be success, partial, or failed."
+            )
+        if not self.tickers:
+            raise ValueError("HedgingDatasetManifest.tickers cannot be empty.")
+        if self.params is None:
+            raise ValueError("HedgingDatasetManifest.params cannot be None.")
+        if self.rows_written < 0:
+            raise ValueError("HedgingDatasetManifest.rows_written cannot be negative.")
+        if self.errors is None:
+            raise ValueError("HedgingDatasetManifest.errors cannot be None.")

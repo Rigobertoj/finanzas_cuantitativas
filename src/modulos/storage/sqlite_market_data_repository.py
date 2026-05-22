@@ -10,9 +10,10 @@ from typing import Any
 import pandas as pd
 
 from modulos.schemas.market_data import OPTION_EOD_CONTRACT, STOCK_EOD_CONTRACT
-from modulos.validation import validate_option_eod, validate_stock_eod
+from modulos.schemas.strategy_data import HEDGING_DATASET_CONTRACT
+from modulos.validation import validate_hedging_dataset, validate_option_eod, validate_stock_eod
 
-from .base import RunManifest
+from .base import HedgingDatasetManifest, RunManifest
 
 
 class SQLiteMarketDataRepository:
@@ -209,6 +210,118 @@ class SQLiteMarketDataRepository:
             result[column[:-5]] = json.loads(result.pop(column))
         return result
 
+    def save_hedging_dataset(
+        self,
+        dataset_id: str,
+        frame: pd.DataFrame,
+        source_run_id: str | None = None,
+    ) -> int:
+        """Validate and upsert ``HedgingDataset`` rows."""
+
+        data = validate_hedging_dataset(frame)
+        data = data.copy()
+        for column in HEDGING_DATASET_CONTRACT.column_names:
+            if column not in data.columns:
+                data[column] = pd.NA
+        data["dataset_id"] = dataset_id
+        data["source_run_id"] = source_run_id
+        rows = [_record_to_sqlite(row) for row in data.to_dict("records")]
+        sql = """
+            INSERT INTO hedging_datasets (
+                dataset_id, ticker, date, expiration_date, option_type, strike,
+                option_mid, underlying_price, time_to_maturity, risk_free_rate,
+                implied_volatility, realized_volatility, model_volatility,
+                delta, gamma, vega, theta, rho, dte, moneyness, relative_spread,
+                source_run_id
+            )
+            VALUES (
+                :dataset_id, :ticker, :date, :expiration_date, :option_type, :strike,
+                :option_mid, :underlying_price, :time_to_maturity, :risk_free_rate,
+                :implied_volatility, :realized_volatility, :model_volatility,
+                :delta, :gamma, :vega, :theta, :rho, :dte, :moneyness, :relative_spread,
+                :source_run_id
+            )
+            ON CONFLICT(dataset_id, ticker, date, expiration_date, option_type, strike)
+            DO UPDATE SET
+                option_mid = excluded.option_mid,
+                underlying_price = excluded.underlying_price,
+                time_to_maturity = excluded.time_to_maturity,
+                risk_free_rate = excluded.risk_free_rate,
+                implied_volatility = excluded.implied_volatility,
+                realized_volatility = excluded.realized_volatility,
+                model_volatility = excluded.model_volatility,
+                delta = excluded.delta,
+                gamma = excluded.gamma,
+                vega = excluded.vega,
+                theta = excluded.theta,
+                rho = excluded.rho,
+                dte = excluded.dte,
+                moneyness = excluded.moneyness,
+                relative_spread = excluded.relative_spread,
+                source_run_id = excluded.source_run_id
+        """
+        with self._connect() as connection:
+            connection.executemany(sql, rows)
+        return len(rows)
+
+    def load_hedging_dataset(self, dataset_id: str) -> pd.DataFrame:
+        """Load one hedging dataset by identifier."""
+
+        columns = ("dataset_id",) + HEDGING_DATASET_CONTRACT.column_names + (
+            "source_run_id",
+        )
+        sql = f"""
+            SELECT {', '.join(columns)}
+            FROM hedging_datasets
+            WHERE dataset_id = ?
+            ORDER BY ticker, date, expiration_date, option_type, strike
+        """
+        with self._connect() as connection:
+            return pd.read_sql_query(sql, connection, params=[dataset_id])
+
+    def save_hedging_dataset_manifest(self, manifest: HedgingDatasetManifest) -> None:
+        """Persist a complete hedging dataset manifest."""
+
+        manifest.validate()
+        row = {
+            "dataset_id": manifest.dataset_id,
+            "source_run_id": manifest.source_run_id,
+            "pipeline_name": manifest.pipeline_name,
+            "status": manifest.status,
+            "created_at_utc": manifest.created_at_utc,
+            "tickers_json": json.dumps(list(manifest.tickers), sort_keys=True),
+            "params_json": json.dumps(manifest.params, sort_keys=True),
+            "rows_written": manifest.rows_written,
+            "errors_json": json.dumps(manifest.errors, sort_keys=True),
+        }
+        sql = """
+            INSERT INTO hedging_dataset_manifests (
+                dataset_id, source_run_id, pipeline_name, status, created_at_utc,
+                tickers_json, params_json, rows_written, errors_json
+            )
+            VALUES (
+                :dataset_id, :source_run_id, :pipeline_name, :status, :created_at_utc,
+                :tickers_json, :params_json, :rows_written, :errors_json
+            )
+        """
+        with self._connect() as connection:
+            connection.execute(sql, row)
+
+    def load_hedging_dataset_manifest(self, dataset_id: str) -> dict[str, Any]:
+        """Return one hedging dataset manifest as a dictionary."""
+
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM hedging_dataset_manifests WHERE dataset_id = ?",
+                (dataset_id,),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"Hedging dataset manifest {dataset_id!r} was not found.")
+        result = dict(row)
+        for column in ("tickers_json", "params_json", "errors_json"):
+            result[column[:-5]] = json.loads(result.pop(column))
+        return result
+
     def _initialize_schema(self) -> None:
         with self._connect() as connection:
             connection.executescript(
@@ -264,6 +377,47 @@ class SQLiteMarketDataRepository:
                     params_json TEXT NOT NULL,
                     rows_written_json TEXT NOT NULL,
                     results_json TEXT NOT NULL,
+                    errors_json TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS hedging_datasets (
+                    dataset_id TEXT NOT NULL,
+                    ticker TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    expiration_date TEXT NOT NULL,
+                    option_type TEXT NOT NULL CHECK(option_type IN ('call', 'put')),
+                    strike REAL NOT NULL CHECK(strike > 0),
+                    option_mid REAL NOT NULL CHECK(option_mid > 0),
+                    underlying_price REAL NOT NULL CHECK(underlying_price > 0),
+                    time_to_maturity REAL NOT NULL CHECK(time_to_maturity > 0),
+                    risk_free_rate REAL NOT NULL,
+                    implied_volatility REAL CHECK(implied_volatility IS NULL OR implied_volatility > 0),
+                    realized_volatility REAL CHECK(realized_volatility IS NULL OR realized_volatility >= 0),
+                    model_volatility REAL CHECK(model_volatility IS NULL OR model_volatility > 0),
+                    delta REAL CHECK(delta IS NULL OR (delta >= -1 AND delta <= 1)),
+                    gamma REAL CHECK(gamma IS NULL OR gamma >= 0),
+                    vega REAL CHECK(vega IS NULL OR vega >= 0),
+                    theta REAL,
+                    rho REAL,
+                    dte REAL CHECK(dte IS NULL OR dte >= 0),
+                    moneyness REAL CHECK(moneyness IS NULL OR moneyness > 0),
+                    relative_spread REAL CHECK(relative_spread IS NULL OR relative_spread >= 0),
+                    source_run_id TEXT,
+                    PRIMARY KEY (
+                        dataset_id, ticker, date, expiration_date, option_type, strike
+                    ),
+                    CHECK(expiration_date > date)
+                );
+
+                CREATE TABLE IF NOT EXISTS hedging_dataset_manifests (
+                    dataset_id TEXT PRIMARY KEY,
+                    source_run_id TEXT,
+                    pipeline_name TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK(status IN ('success', 'partial', 'failed')),
+                    created_at_utc TEXT NOT NULL,
+                    tickers_json TEXT NOT NULL,
+                    params_json TEXT NOT NULL,
+                    rows_written INTEGER NOT NULL CHECK(rows_written >= 0),
                     errors_json TEXT NOT NULL
                 );
                 """

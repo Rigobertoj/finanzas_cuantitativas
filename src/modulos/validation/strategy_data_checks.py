@@ -52,9 +52,16 @@ def validate_hedging_dataset(df: pd.DataFrame) -> pd.DataFrame:
             "time_to_maturity",
             "implied_volatility",
             "model_volatility",
+            "moneyness",
         ),
         HEDGING_DATASET_CONTRACT.name,
     )
+    require_non_negative(
+        result,
+        ("realized_volatility", "gamma", "vega", "dte", "relative_spread"),
+        HEDGING_DATASET_CONTRACT.name,
+    )
+    _require_delta_range(result, HEDGING_DATASET_CONTRACT.name)
     _require_expiration_after_date(result, HEDGING_DATASET_CONTRACT.name)
     return result
 
@@ -83,3 +90,11 @@ def _require_expiration_after_date(df: pd.DataFrame, contract_name: str) -> None
     rows = df["expiration_date"] <= df["date"]
     if rows.any():
         raise ValueError(f"{contract_name}.expiration_date must be after date.")
+
+
+def _require_delta_range(df: pd.DataFrame, contract_name: str) -> None:
+    if "delta" not in df.columns:
+        return
+    rows = df["delta"].notna() & ((df["delta"] < -1.0) | (df["delta"] > 1.0))
+    if rows.any():
+        raise ValueError(f"{contract_name}.delta must be between -1 and 1.")

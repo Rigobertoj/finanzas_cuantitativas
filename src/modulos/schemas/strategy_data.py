@@ -31,9 +31,16 @@ HEDGING_DATASET_CONTRACT = DataContract(
         ColumnSpec("time_to_maturity", "float", True, "Time to maturity in years."),
         ColumnSpec("risk_free_rate", "float", True, "Risk-free rate in decimal form."),
         ColumnSpec("implied_volatility", "float", False, "Market implied volatility."),
+        ColumnSpec("realized_volatility", "float", False, "Rolling realized volatility."),
         ColumnSpec("model_volatility", "float", False, "Model volatility assumption."),
         ColumnSpec("delta", "float", False, "Delta used by hedging strategies."),
         ColumnSpec("gamma", "float", False, "Gamma used by delta-gamma hedging."),
+        ColumnSpec("vega", "float", False, "Sensitivity to volatility."),
+        ColumnSpec("theta", "float", False, "Sensitivity to time decay."),
+        ColumnSpec("rho", "float", False, "Sensitivity to interest rates."),
+        ColumnSpec("dte", "float", False, "Calendar days to expiration."),
+        ColumnSpec("moneyness", "float", False, "Strike divided by underlying price."),
+        ColumnSpec("relative_spread", "float", False, "Bid-ask spread divided by mid price."),
     ),
 )
 
