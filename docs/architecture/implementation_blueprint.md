@@ -352,7 +352,7 @@ Criterio de exito:
 - El blueprint define estructura, contratos, fases y riesgos antes de tocar
   codigo.
 
-### Fase 1: Reorganizacion de carpetas
+### Fase 0: Reorganizacion de carpetas
 
 Entregables:
 
@@ -367,7 +367,7 @@ Criterio de exito:
 - Los notebooks originales se conservan como legado.
 - No se cambia logica de calculo.
 
-### Fase 2: Esqueleto de `src/modulos`
+### Fase 1: Esqueleto de `src/modulos`
 
 Entregables:
 
@@ -379,7 +379,7 @@ Criterio de exito:
 
 - Se puede importar `src/modulos` sin ejecutar descargas ni notebooks.
 
-### Fase 3: Contratos y validaciones
+### Fase 2: Contratos y validaciones
 
 Entregables:
 
@@ -391,7 +391,7 @@ Criterio de exito:
 
 - Un dataset invalido falla con errores claros.
 
-### Fase 4: Provider ThetaData
+### Fase 3: Provider ThetaData
 
 Entregables:
 
@@ -404,7 +404,7 @@ Criterio de exito:
 
 - El sistema consulta varios tickers desde ThetaData sin editar notebooks.
 
-### Fase 5: Storage local
+### Fase 4: Storage local
 
 Entregables:
 
@@ -417,7 +417,7 @@ Criterio de exito:
 - Cada dataset puede trazarse a ticker, rango de fechas, fuente y hora de
   descarga.
 
-### Fase 6: Pipeline de hedging
+### Fase 5: Pipeline de hedging
 
 Entregables:
 
@@ -429,7 +429,7 @@ Criterio de exito:
 
 - Una llamada prepara el dataset que necesita una estrategia.
 
-### Fase 7: Estrategias y evaluacion
+### Fase 6: Estrategias y evaluacion
 
 Entregables:
 
@@ -442,7 +442,7 @@ Criterio de exito:
 
 - Las estrategias se comparan bajo el mismo dataset y supuestos.
 
-### Fase 8: Proyecto publicable
+### Fase 7: Proyecto publicable
 
 Entregables:
 
