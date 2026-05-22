@@ -31,10 +31,24 @@ class MarketDataContractTests(unittest.TestCase):
         result = validate_option_eod(frame)
         self.assertEqual(result["option_type"].tolist(), ["call", "put"])
 
+    def test_option_eod_allows_zero_dte_contracts(self) -> None:
+        frame = pd.read_csv(FIXTURES / "option_eod_sample.csv").iloc[[0]].copy()
+        frame["date"] = "2026-04-01"
+        frame["expiration_date"] = "2026-04-01"
+        result = validate_option_eod(frame)
+        self.assertEqual(result["expiration_date"].iloc[0], result["date"].iloc[0])
+
     def test_option_eod_rejects_bad_spread(self) -> None:
         frame = pd.read_csv(FIXTURES / "option_eod_sample.csv")
         frame.loc[0, "ask"] = 3.0
         with self.assertRaisesRegex(ValueError, "ask"):
+            validate_option_eod(frame)
+
+    def test_option_eod_rejects_expired_contract_rows(self) -> None:
+        frame = pd.read_csv(FIXTURES / "option_eod_sample.csv").iloc[[0]].copy()
+        frame["date"] = "2026-04-02"
+        frame["expiration_date"] = "2026-04-01"
+        with self.assertRaisesRegex(ValueError, "expiration_date"):
             validate_option_eod(frame)
 
     def test_stock_eod_rejects_missing_required_column(self) -> None:
