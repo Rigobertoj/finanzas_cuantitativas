@@ -14,13 +14,41 @@ from uuid import uuid4
 
 
 def new_run_id(prefix: str = "market-data") -> str:
-    """Return a unique run identifier for pipeline manifests."""
+    """Return a unique identifier for pipeline and dataset manifests.
+
+    Parameters
+    ----------
+    prefix:
+        Human-readable prefix that identifies the kind of run, for example
+        ``"market-data"`` or ``"hedging-dataset"``.
+
+    Returns
+    -------
+    str
+        Identifier composed of the prefix and a UUID4 hexadecimal value.
+
+    Examples
+    --------
+    >>> new_run_id("example").startswith("example-")
+    True
+    """
 
     return f"{prefix}-{uuid4().hex}"
 
 
 def utc_timestamp() -> str:
-    """Return the current UTC timestamp in ISO-8601 format."""
+    """Return the current UTC timestamp in ISO-8601 format.
+
+    Returns
+    -------
+    str
+        Timezone-aware UTC timestamp suitable for storage manifests.
+
+    Notes
+    -----
+    Manifests use UTC so ingestion, dataset construction and later strategy
+    runs can be compared without depending on the local machine timezone.
+    """
 
     return datetime.now(timezone.utc).isoformat()
 
@@ -131,7 +159,38 @@ class RunManifest:
 
 @dataclass(frozen=True)
 class HedgingDatasetManifest:
-    """Audit record for one generated hedging dataset."""
+    """Complete audit record for one generated hedging dataset.
+
+    ``HedgingDatasetManifest`` records the lineage between market-data storage
+    and a processed ``HedgingDataset``. It is intentionally persisted beside the
+    dataset in SQLite so a future strategy result can be traced back to the
+    tickers, date window, contract-selection policy and model assumptions used
+    to build its input data.
+
+    Attributes
+    ----------
+    dataset_id:
+        Unique identifier for the generated hedging dataset.
+    source_run_id:
+        Optional ingestion run identifier from ``run_manifests``. It may be
+        ``None`` when the dataset is created from pre-existing local data.
+    pipeline_name:
+        Name of the pipeline that created the dataset.
+    status:
+        Final dataset build status: ``"success"``, ``"partial"`` or
+        ``"failed"``.
+    created_at_utc:
+        ISO-8601 UTC timestamp for dataset creation.
+    tickers:
+        Tickers requested by the dataset build.
+    params:
+        Reproducibility parameters such as date range, DTE bounds, moneyness
+        target, risk-free rate, day count and rebalance frequency.
+    rows_written:
+        Number of dataset rows written to storage.
+    errors:
+        Structured error details captured during the build.
+    """
 
     dataset_id: str
     source_run_id: str | None
@@ -144,7 +203,15 @@ class HedgingDatasetManifest:
     errors: list[dict[str, str]]
 
     def validate(self) -> None:
-        """Validate manifest completeness before persistence."""
+        """Validate manifest completeness before persistence.
+
+        Raises
+        ------
+        ValueError
+            If required text fields are empty, status is unsupported, no
+            tickers are recorded, params is ``None``, row count is negative or
+            errors is ``None``.
+        """
 
         required_text = {
             "dataset_id": self.dataset_id,

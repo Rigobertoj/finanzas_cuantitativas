@@ -20,6 +20,36 @@ from modulos.validation.base import (
 def validate_hedging_dataset(df: pd.DataFrame) -> pd.DataFrame:
     """Validate and normalize a ``HedgingDataset`` DataFrame.
 
+    The validator enforces both the declarative contract and the business rules
+    required before a dataset can be used by hedging strategies. It normalizes
+    ticker casing and option side, rejects duplicate natural keys, verifies
+    positive prices and maturity, keeps optional model features nullable and
+    ensures expirations are strictly after observation dates.
+
+    Parameters
+    ----------
+    df:
+        Candidate hedging dataset. Required columns are defined by
+        ``HEDGING_DATASET_CONTRACT``.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Normalized copy with converted types and validated business rules.
+
+    Raises
+    ------
+    ValueError
+        If required columns are missing, required values are null, natural keys
+        are duplicated, option type is unsupported, numeric constraints fail or
+        expiration is not after date.
+
+    Notes
+    -----
+    Optional fields such as implied volatility, realized volatility and Greeks
+    may remain null. This is intentional: the pipeline preserves rows when a
+    model calculation cannot be completed so research can audit those cases.
+
     Example
     -------
     >>> import pandas as pd
@@ -67,7 +97,24 @@ def validate_hedging_dataset(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def validate_strategy_result(df: pd.DataFrame) -> pd.DataFrame:
-    """Validate and normalize a ``StrategyResult`` DataFrame."""
+    """Validate and normalize a ``StrategyResult`` DataFrame.
+
+    Parameters
+    ----------
+    df:
+        Candidate strategy-result DataFrame.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Normalized copy satisfying ``STRATEGY_RESULT_CONTRACT``.
+
+    Raises
+    ------
+    ValueError
+        If required fields are missing, natural keys are duplicated or
+        transaction costs are negative.
+    """
 
     result = validate_contract(df, STRATEGY_RESULT_CONTRACT)
     _normalize_ticker(result)

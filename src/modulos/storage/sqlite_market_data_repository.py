@@ -19,6 +19,11 @@ from .base import HedgingDatasetManifest, RunManifest
 class SQLiteMarketDataRepository:
     """Persist market data and manifests in a local SQLite database.
 
+    The repository is the local storage boundary for the modular monolith. It
+    owns SQLite table creation, validation-before-write and deterministic
+    upserts for market data and processed hedging datasets. Pipelines should use
+    this class instead of writing SQL directly from notebooks.
+
     Parameters
     ----------
     database_path:
@@ -30,6 +35,11 @@ class SQLiteMarketDataRepository:
     -----
     The repository validates DataFrames before writing and uses natural-key
     primary keys to prevent duplicate market observations.
+
+    Attributes
+    ----------
+    database_path:
+        Path to the SQLite database file managed by the repository.
     """
 
     def __init__(self, database_path: str | Path = "data/sqlite/backtesting.sqlite") -> None:
@@ -120,7 +130,24 @@ class SQLiteMarketDataRepository:
         end_date: str | None = None,
         source: str = "ThetaData",
     ) -> pd.DataFrame:
-        """Load stock EOD rows by ticker, source and optional date window."""
+        """Load stock EOD rows by ticker, source and optional date window.
+
+        Parameters
+        ----------
+        ticker:
+            Underlying symbol. It is normalized to uppercase before querying.
+        start_date, end_date:
+            Optional inclusive date bounds. Values in ``YYYYMMDD`` format are
+            converted to SQLite ISO dates.
+        source:
+            Data source label stored with the rows.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Stock EOD rows ordered by date and shaped according to
+            ``STOCK_EOD_CONTRACT``.
+        """
 
         return self._load_table(
             table="stock_eod",
@@ -139,7 +166,24 @@ class SQLiteMarketDataRepository:
         end_date: str | None = None,
         source: str = "ThetaData",
     ) -> pd.DataFrame:
-        """Load option EOD rows by ticker, source and optional date window."""
+        """Load option EOD rows by ticker, source and optional date window.
+
+        Parameters
+        ----------
+        ticker:
+            Underlying symbol. It is normalized to uppercase before querying.
+        start_date, end_date:
+            Optional inclusive observation-date bounds. Values in ``YYYYMMDD``
+            format are converted to SQLite ISO dates.
+        source:
+            Data source label stored with the rows.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Option EOD rows ordered by date, expiration, option side and strike,
+            shaped according to ``OPTION_EOD_CONTRACT``.
+        """
 
         return self._load_table(
             table="option_eod",
@@ -190,7 +234,25 @@ class SQLiteMarketDataRepository:
             connection.execute(sql, row)
 
     def load_run_manifest(self, run_id: str) -> dict[str, Any]:
-        """Return one persisted run manifest as a dictionary."""
+        """Return one persisted run manifest as a dictionary.
+
+        Parameters
+        ----------
+        run_id:
+            Identifier of the market-data ingestion run to load.
+
+        Returns
+        -------
+        dict[str, Any]
+            Manifest row with JSON fields decoded into Python objects. The keys
+            ``tickers``, ``params``, ``rows_written``, ``results`` and
+            ``errors`` are returned as structured values.
+
+        Raises
+        ------
+        KeyError
+            If no manifest exists for ``run_id``.
+        """
 
         with self._connect() as connection:
             row = connection.execute(
@@ -216,7 +278,37 @@ class SQLiteMarketDataRepository:
         frame: pd.DataFrame,
         source_run_id: str | None = None,
     ) -> int:
-        """Validate and upsert ``HedgingDataset`` rows."""
+        """Validate and upsert ``HedgingDataset`` rows.
+
+        Parameters
+        ----------
+        dataset_id:
+            Identifier assigned to the generated dataset. It becomes part of
+            the SQLite primary key so several dataset builds can coexist.
+        frame:
+            DataFrame satisfying the ``HedgingDataset`` contract. Missing
+            optional contract columns are added as nulls before writing.
+        source_run_id:
+            Optional ingestion run identifier that links this dataset to a
+            market-data manifest.
+
+        Returns
+        -------
+        int
+            Number of validated rows submitted to SQLite.
+
+        Raises
+        ------
+        ValueError
+            If ``frame`` violates the ``HedgingDataset`` contract or business
+            rules such as positive prices and expiration after observation date.
+
+        Notes
+        -----
+        The natural key is ``dataset_id``, ``ticker``, ``date``,
+        ``expiration_date``, ``option_type`` and ``strike``. Existing rows for
+        the same key are updated with the latest feature values.
+        """
 
         data = validate_hedging_dataset(frame)
         data = data.copy()
@@ -265,7 +357,20 @@ class SQLiteMarketDataRepository:
         return len(rows)
 
     def load_hedging_dataset(self, dataset_id: str) -> pd.DataFrame:
-        """Load one hedging dataset by identifier."""
+        """Load one hedging dataset by identifier.
+
+        Parameters
+        ----------
+        dataset_id:
+            Identifier of the dataset to load.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Persisted rows ordered by ticker, date, expiration, option side and
+            strike. The returned frame includes ``dataset_id`` and
+            ``source_run_id`` in addition to contract columns.
+        """
 
         columns = ("dataset_id",) + HEDGING_DATASET_CONTRACT.column_names + (
             "source_run_id",
@@ -280,7 +385,20 @@ class SQLiteMarketDataRepository:
             return pd.read_sql_query(sql, connection, params=[dataset_id])
 
     def save_hedging_dataset_manifest(self, manifest: HedgingDatasetManifest) -> None:
-        """Persist a complete hedging dataset manifest."""
+        """Persist a complete hedging dataset manifest.
+
+        Parameters
+        ----------
+        manifest:
+            Validated metadata describing one generated hedging dataset.
+
+        Raises
+        ------
+        ValueError
+            If the manifest is incomplete or contains an unsupported status.
+        sqlite3.IntegrityError
+            If another manifest with the same ``dataset_id`` already exists.
+        """
 
         manifest.validate()
         row = {
@@ -308,7 +426,25 @@ class SQLiteMarketDataRepository:
             connection.execute(sql, row)
 
     def load_hedging_dataset_manifest(self, dataset_id: str) -> dict[str, Any]:
-        """Return one hedging dataset manifest as a dictionary."""
+        """Return one hedging dataset manifest as a dictionary.
+
+        Parameters
+        ----------
+        dataset_id:
+            Identifier of the manifest to load.
+
+        Returns
+        -------
+        dict[str, Any]
+            Manifest row with JSON fields decoded into Python objects. The keys
+            ``tickers``, ``params`` and ``errors`` are returned as structured
+            values.
+
+        Raises
+        ------
+        KeyError
+            If no manifest exists for ``dataset_id``.
+        """
 
         with self._connect() as connection:
             row = connection.execute(

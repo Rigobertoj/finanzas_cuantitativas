@@ -8,7 +8,37 @@ from math import erf, exp, isfinite, log, pi, sqrt
 
 @dataclass(frozen=True)
 class BlackScholesInputs:
-    """Inputs required by Black-Scholes formulas."""
+    """Inputs required by the Black-Scholes analytical formulas.
+
+    The object groups the assumptions needed by pricing, Greek and implied
+    volatility helpers. It is intentionally small and immutable so callers can
+    pass a complete pricing state without coupling the model to a DataFrame,
+    repository or strategy class.
+
+    Attributes
+    ----------
+    option_type:
+        Option side. Accepted values are ``"call"`` and ``"put"``; casing and
+        surrounding whitespace are normalized by the calculation helpers.
+    underlying_price:
+        Current price of the underlying asset. It must be positive.
+    strike:
+        Option strike price. It must be positive.
+    time_to_maturity:
+        Time to expiration expressed in years. The hedging pipeline derives it
+        from DTE and the configured day-count convention.
+    risk_free_rate:
+        Continuously compounded risk-free rate in decimal form, for example
+        ``0.045`` for 4.5%.
+    volatility:
+        Annualized volatility in decimal form, for example ``0.20`` for 20%.
+
+    Notes
+    -----
+    Dividend yield is not modeled in this first benchmark. Future extensions
+    can add a dividend or carry parameter without changing the surrounding
+    pipeline contract.
+    """
 
     option_type: str
     underlying_price: float
@@ -20,7 +50,26 @@ class BlackScholesInputs:
 
 @dataclass(frozen=True)
 class BlackScholesGreeks:
-    """First-order Black-Scholes sensitivities and gamma."""
+    """Sensitivity outputs returned by ``black_scholes_greeks``.
+
+    Attributes
+    ----------
+    delta:
+        Sensitivity of option value to a one-unit change in the underlying
+        price.
+    gamma:
+        Sensitivity of delta to a one-unit change in the underlying price.
+    vega:
+        Sensitivity of option value to a one-unit change in volatility. The
+        value is not divided by 100, so a 1 percentage point volatility move is
+        approximately ``vega * 0.01``.
+    theta:
+        Sensitivity of option value to the passage of one year. The value is
+        annualized, not divided into calendar or trading days.
+    rho:
+        Sensitivity of option value to a one-unit change in the risk-free rate.
+        A 1 percentage point rate move is approximately ``rho * 0.01``.
+    """
 
     delta: float
     gamma: float
@@ -30,7 +79,31 @@ class BlackScholesGreeks:
 
 
 def black_scholes_price(inputs: BlackScholesInputs) -> float:
-    """Return the Black-Scholes price for a European call or put."""
+    """Return the Black-Scholes price for a European call or put.
+
+    Parameters
+    ----------
+    inputs:
+        Complete pricing assumptions. Price, strike, maturity and volatility
+        must be strictly positive.
+
+    Returns
+    -------
+    float
+        Theoretical option value under the Black-Scholes assumptions.
+
+    Raises
+    ------
+    ValueError
+        If ``option_type`` is not ``"call"`` or ``"put"``, or if any required
+        positive input is non-positive.
+
+    Examples
+    --------
+    >>> inputs = BlackScholesInputs("call", 100.0, 100.0, 1.0, 0.05, 0.20)
+    >>> round(black_scholes_price(inputs), 4)
+    10.4506
+    """
 
     d1, d2 = _d1_d2(inputs)
     side = _normalize_option_type(inputs.option_type)
@@ -44,7 +117,30 @@ def black_scholes_price(inputs: BlackScholesInputs) -> float:
 
 
 def black_scholes_greeks(inputs: BlackScholesInputs) -> BlackScholesGreeks:
-    """Return delta, gamma, vega, theta and rho."""
+    """Return first-order Black-Scholes Greeks and gamma.
+
+    Parameters
+    ----------
+    inputs:
+        Complete pricing assumptions. The same domain restrictions as
+        ``black_scholes_price`` apply.
+
+    Returns
+    -------
+    BlackScholesGreeks
+        Delta, gamma, vega, annualized theta and rho for the requested option.
+
+    Raises
+    ------
+    ValueError
+        If ``option_type`` is invalid, or if price, strike, maturity or
+        volatility are non-positive.
+
+    Notes
+    -----
+    The function returns raw analytical sensitivities. It does not rescale vega
+    or rho by 100 and does not convert theta to a daily value.
+    """
 
     d1, d2 = _d1_d2(inputs)
     side = _normalize_option_type(inputs.option_type)
@@ -97,6 +193,46 @@ def implied_volatility(
     ``None`` is returned when the solver cannot bracket or converge to a
     plausible volatility. The pipeline stores that case as ``NaN`` so the row
     remains auditable without pretending the Greek calculation succeeded.
+
+    Parameters
+    ----------
+    option_price:
+        Observed option price used as the inversion target. In the hedging
+        pipeline this is ``option_mid``.
+    option_type:
+        Option side, ``"call"`` or ``"put"``.
+    underlying_price:
+        Current underlying price.
+    strike:
+        Option strike.
+    time_to_maturity:
+        Time to expiration expressed in years.
+    risk_free_rate:
+        Risk-free rate in decimal form.
+    min_volatility, max_volatility:
+        Lower and upper bounds used to bracket the bisection search.
+    tolerance:
+        Maximum absolute pricing error accepted as convergence.
+    max_iterations:
+        Maximum number of bisection steps.
+
+    Returns
+    -------
+    float | None
+        Annualized implied volatility when the solver converges; otherwise
+        ``None``.
+
+    Raises
+    ------
+    ValueError
+        If ``option_type`` is invalid during pricing.
+
+    Examples
+    --------
+    >>> inputs = BlackScholesInputs("call", 100.0, 100.0, 1.0, 0.05, 0.20)
+    >>> price = black_scholes_price(inputs)
+    >>> round(implied_volatility(price, "call", 100.0, 100.0, 1.0, 0.05), 4)
+    0.2
     """
 
     if min(option_price, underlying_price, strike, time_to_maturity) <= 0:

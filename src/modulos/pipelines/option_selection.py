@@ -9,7 +9,27 @@ import pandas as pd
 
 @dataclass(frozen=True)
 class OptionSelectionConfig:
-    """Configuration for selecting one option contract per date."""
+    """Configuration for deterministic option contract selection.
+
+    Attributes
+    ----------
+    option_type:
+        Option side to select. The first research dataset defaults to
+        ``"call"``; ``"put"`` is also accepted by downstream validation.
+    min_dte:
+        Minimum days to expiration allowed for a candidate contract.
+    max_dte:
+        Maximum days to expiration allowed for a candidate contract.
+    target_moneyness:
+        Desired ``strike / underlying_price``. A value of ``1.0`` targets ATM
+        contracts.
+
+    Notes
+    -----
+    Liquidity is not used as a hard filter in Phase 5. Volume and relative
+    spread only resolve ties after option type, DTE and moneyness have been
+    applied.
+    """
 
     option_type: str = "call"
     min_dte: int = 30
@@ -25,6 +45,36 @@ def select_contracts(
 
     The ranking avoids ambiguous results by sorting with explicit tie-breakers:
     moneyness distance, volume, relative spread, DTE and strike.
+
+    Parameters
+    ----------
+    option_eod:
+        DataFrame satisfying the ``OptionEOD`` contract or containing the
+        columns required by the selector: ``ticker``, ``date``,
+        ``expiration_date``, ``option_type``, ``strike`` and
+        ``underlying_price``. ``bid``, ``ask``, ``mid`` and ``volume`` improve
+        tie-breaking when available.
+    config:
+        Selection parameters used to filter and rank contracts.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One selected contract per ``ticker`` and ``date`` when candidates are
+        available. The result includes derived columns such as ``dte``,
+        ``moneyness``, ``moneyness_distance``, ``relative_spread`` and
+        ``selection_rank``.
+
+    Raises
+    ------
+    ValueError
+        If DTE bounds are invalid or ``target_moneyness`` is non-positive.
+
+    Examples
+    --------
+    >>> config = OptionSelectionConfig(min_dte=30, max_dte=60)
+    >>> selected = select_contracts(option_eod, config)  # doctest: +SKIP
+    >>> selected[["ticker", "date", "strike"]]  # doctest: +SKIP
     """
 
     if config.min_dte < 0 or config.max_dte < config.min_dte:
@@ -79,6 +129,8 @@ def select_contracts(
 
 
 def _relative_spread(frame: pd.DataFrame) -> pd.Series:
+    """Return ``(ask - bid) / mid`` when quote columns are available."""
+
     if not {"bid", "ask", "mid"}.issubset(frame.columns):
         return pd.Series(pd.NA, index=frame.index)
     bid = pd.to_numeric(frame["bid"], errors="coerce")
